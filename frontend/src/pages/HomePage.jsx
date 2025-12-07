@@ -32,32 +32,28 @@ function HomePage() {
       <header className="home-header">
         {/* כפתור התחברות – ימין למעלה */}
         <div className="home-login">
-            <button className="login-main-btn">
-            אזור אישי
-            </button>
-            <span className="login-subtext">
+          <button className="login-main-btn">אזור אישי</button>
+          <span className="login-subtext">
             כניסת מנהל מערכת / הנהלת קמפוס
-            </span>
+          </span>
         </div>
 
-        {/* כותרת + לוגו במרכז */}
+        {/* לוגו + כותרת במרכז */}
         <div className="home-title-center">
-            <img
-            src="/SCE_logo.png"   // או השם המדויק של הקובץ
+          <img
+            src="/SCE_logo.png"
             alt="SCE"
             className="home-logo"
-            />
-            <h1 className="home-title-he">
+          />
+          <h1 className="home-title-he">
             סיכום פעילות מחלקת הרישום
-            </h1>
-            <p className="home-subtitle-he">
+          </h1>
+          <p className="home-subtitle-he">
             תצוגה מרוכזת של לידים, פגישות ומכירות – בזמן כמעט אמת.
-            </p>
+          </p>
         </div>
       </header>
 
-
-      {/* הצגת שגיאה רק אם יש שגיאה ואין כלל נתונים */}
       {error && !summary && (
         <div className="home-error">{error}</div>
       )}

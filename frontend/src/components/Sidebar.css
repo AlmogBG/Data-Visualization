@@ -1,0 +1,153 @@
+/* כפתור – שלושה פסים, בלי עיגול מסביב */
+.sidebar-toggle {
+  position: fixed;
+  top: 24px;
+  right: 24px;
+  z-index: 60;
+
+  width: 36px;
+  height: 32px;
+
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 5px;
+}
+
+/* שלושת הקווים */
+.sidebar-toggle span {
+  width: 70%;
+  height: 3px;
+  border-radius: 999px;
+  background: #f9fafb;
+  transition: transform 0.18s ease, opacity 0.18s ease;
+}
+
+/* כשהתפריט פתוח – הופך ל־X סימטרי */
+.sidebar-toggle.open span:nth-child(1) {
+  transform: translateY(4px) rotate(45deg);
+}
+.sidebar-toggle.open span:nth-child(2) {
+  opacity: 0;
+}
+.sidebar-toggle.open span:nth-child(3) {
+  transform: translateY(-4px) rotate(-45deg);
+}
+
+/* שכבת רקע מאחורה */
+.sidebar-overlay {
+  position: fixed;
+  inset: 0;
+  background: rgba(15, 23, 42, 0.45);
+  opacity: 0;
+  pointer-events: none;
+  transition: opacity 0.2s ease;
+  z-index: 40;
+}
+
+.sidebar-overlay.open {
+  opacity: 1;
+  pointer-events: auto;
+}
+
+/* התפריט עצמו */
+.sidebar {
+  position: fixed;
+  top: 0;
+  right: 0;
+  height: 100vh;
+  width: 320px;
+  max-width: 80%;
+  background: #020617;
+  color: #f9fafb;
+  padding: 24px 20px;
+  transform: translateX(100%);
+  transition: transform 0.25s ease-out, box-shadow 0.25s ease-out;
+  box-shadow: 0 0 0 rgba(0, 0, 0, 0);
+  z-index: 50;
+  display: flex;
+  flex-direction: column;
+}
+
+/* במצב פתוח */
+.sidebar.open {
+  transform: translateX(0);
+  box-shadow: -18px 0 40px rgba(0, 0, 0, 0.6);
+}
+
+/* HEADER של התפריט */
+.sidebar-header {
+  position: relative;
+  text-align: center;
+  padding-top: 8px;
+  padding-bottom: 16px;
+}
+
+.sidebar-header h2 {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.sidebar-subtitle {
+  margin: 4px 0 0;
+  font-size: 0.8rem;
+  color: #9ca3af;
+}
+
+/* כפתור X – בפינה השמאלית, בגודל פרופורציונלי */
+.sidebar-close-btn {
+  position: absolute;
+  top: 10px;
+  left: 12px;
+
+  width: 32px;
+  height: 32px;
+  background: transparent;
+  border: none;
+  cursor: pointer;
+
+  display: flex;
+  align-items: center;
+  justify-content: center;
+
+  color: #e5e7eb;
+  font-size: 22px;   /* גודל ה-X */
+  line-height: 1;
+  padding: 0;
+}
+
+.sidebar-close-btn:hover {
+  color: #ffffff;
+}
+
+/* לינקים בתפריט */
+.sidebar-nav {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 16px;
+}
+
+.sidebar-nav a {
+  text-decoration: none;
+  color: #f9fafb;
+  padding: 10px 0;
+  font-size: 0.95rem;
+  border-bottom: 1px solid #1f2937;
+  transition:
+    color 0.15s ease,
+    padding-right 0.15s ease,
+    background 0.15s ease;
+}
+
+.sidebar-nav a:hover {
+  color: #38bdf8;
+  padding-right: 4px;
+  background: rgba(15, 23, 42, 0.6);
+}

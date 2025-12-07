@@ -1,15 +1,19 @@
-/* רקע כללי */
+/* רקע כללי לכל האפליקציה */
 .app-root {
   min-height: 100vh;
   background: #2f3035;
 }
 
-/* לוגו SCE – קטן, לבן ועדין */
+/* אזור התוכן המרכזי */
+.app-main {
+  /* אין כאן flex, שלא יזיז את הדף */
+  padding: 0;
+}
+
+/* לוגו SCE – בצבע לבן */
 .home-logo {
-  height: 36px;
-  width: auto;
-  object-fit: contain;
-  opacity: 0.9;
+  height: 38px;
+  opacity: 0.85;
   filter: brightness(0) invert(1);
 }
 
@@ -26,8 +30,8 @@
 /* HEADER – כפתור ימין, כותרת במרכז */
 .home-header {
   position: relative;
-  margin-bottom: 32px;         /* קצת פחות רווח מעל הכרטיסים */
-  text-align: center;          /* הכותרת במרכז */
+  margin-bottom: 40px;
+  text-align: center;
 }
 
 /* כותרת במרכז */
@@ -41,13 +45,13 @@
   font-size: 1.9rem;
   font-weight: 700;
   color: #ffffff;
-  margin: 6px 0 0;             /* טיפה רווח מעל הכותרת */
+  margin: 0;
 }
 
 .home-subtitle-he {
   font-size: 0.95rem;
   color: #d1d5db;
-  margin-top: 4px;
+  margin-top: 6px;
   margin-bottom: 0;
 }
 
@@ -112,18 +116,19 @@
   min-width: 280px;
   max-width: 360px;
   flex: 1 1 0;
-  transition: transform 0.25s ease, box-shadow 0.25s ease;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
 }
 
-/* אפקט hover עדין לכרטיסים */
+/* אפקט hover קטן */
 .category-card:hover {
   transform: translateY(-4px);
-  box-shadow: 0 22px 50px rgba(0, 0, 0, 0.75);
+  box-shadow: 0 22px 56px rgba(0, 0, 0, 0.75);
 }
 
+/* כותרת עמודה */
 .category-title {
   text-align: center;
-  font-size: 1.2rem;           /* טיפה בולט יותר */
+  font-size: 1.2rem;
   font-weight: 600;
   margin: 0 0 14px;
   color: #f9fafb;
