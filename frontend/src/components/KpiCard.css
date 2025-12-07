@@ -1,0 +1,70 @@
+.kpi-card {
+  background: #f3f4f6;
+  border-radius: 18px;
+  padding: 10px 12px;
+  box-shadow:
+    3px 3px 8px rgba(0, 0, 0, 0.45),
+    -2px -2px 4px rgba(255, 255, 255, 0.08);
+  display: flex;
+  flex-direction: column;
+  justify-content: space-between;
+  border: none;
+  text-align: right;
+}
+
+.kpi-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.kpi-title {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: #374151;
+  margin: 0;
+}
+
+.kpi-main {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  margin-bottom: 6px;
+}
+
+.kpi-value {
+  font-size: 1.4rem;
+  font-weight: 600;
+  color: #111827;
+}
+
+.kpi-subtitle {
+  font-size: 0.7rem;
+  color: #6b7280;
+}
+
+/* תגית המגמה בתחתית הכרטיס */
+.kpi-trend {
+  display: inline-flex;
+  align-items: center;
+  padding: 3px 8px;
+  border-radius: 999px;
+  font-size: 0.7rem;
+  font-weight: 500;
+}
+
+.kpi-trend-up {
+  background: #ecfdf3;
+  color: #166534;
+}
+
+.kpi-trend-down {
+  background: #fef2f2;
+  color: #b91c1c;
+}
+
+.kpi-trend-neutral {
+  background: #e5e7eb;
+  color: #4b5563;
+}
