@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
   PieChart,
@@ -8,6 +9,7 @@ import {
   Legend,
 } from "recharts";
 import Sidebar from "../components/Sidebar";
+import TopNavbar from "../components/TopNavbar";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://localhost:10000";
@@ -65,7 +67,12 @@ function buildMockByMedia({ year, campus }) {
 /** ---------- Icons ---------- */
 function MiniIcon({ children, className = "", size = "h-5 w-5" }) {
   return (
-    <svg viewBox="0 0 24 24" className={`${size} ${className}`} fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className={`${size} ${className}`}
+      fill="none"
+      aria-hidden="true"
+    >
       {children}
     </svg>
   );
@@ -174,6 +181,8 @@ function CustomLegend({ payload }) {
 
 /** ---------- Component ---------- */
 export default function Report5() {
+  const navigate = useNavigate();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [campus, setCampus] = useState("ALL");
   const [year, setYear] = useState("תשפ״ה");
@@ -184,6 +193,15 @@ export default function Report5() {
 
   const campusLabel =
     campusOptions.find((c) => c.key === campus)?.label ?? "כל הקמפוסים";
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -272,38 +290,10 @@ export default function Report5() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
+      <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-14">
-        <div className="grid grid-cols-3 items-start">
-          <div className="justify-self-start">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              className="rounded-full p-3 text-white/90 hover:bg-white/10 -mt-2"
-              aria-label="פתיחת תפריט"
-            >
-              <span className="text-2xl leading-none">≡</span>
-            </button>
-          </div>
-
-          <div className="justify-self-center text-center">
-            <div className="mx-auto inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/10">
-              <img
-                src="/SCE_logo.png"
-                alt="SCE"
-                className="h-10 w-auto"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            </div>
-            <div className="mt-2 text-[12px] text-white/75">
-              המכללה האקדמית להנדסה ע״ש סמי שמעון
-            </div>
-          </div>
-
-          <div />
-        </div>
-
+      <div className="mx-auto max-w-6xl px-6 pt-28 pb-14">
         <div className="mt-6 text-center">
           <div className="inline-flex items-center justify-center gap-2">
             <IcoTitle />
@@ -379,7 +369,7 @@ export default function Report5() {
 
             <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
               <div className="rounded-2xl bg-[#2e3038] p-4 ring-1 ring-white/10">
-                <div className="mb-3 text-sm font-semibold text-white/90 text-center">
+                <div className="mb-3 text-center text-sm font-semibold text-white/90">
                   לידים איכותיים
                 </div>
 
@@ -412,7 +402,7 @@ export default function Report5() {
               </div>
 
               <div className="rounded-2xl bg-[#2e3038] p-4 ring-1 ring-white/10">
-                <div className="mb-3 text-sm font-semibold text-white/90 text-center">
+                <div className="mb-3 text-center text-sm font-semibold text-white/90">
                   סה״כ לידים
                 </div>
 

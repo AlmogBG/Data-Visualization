@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -11,6 +12,7 @@ import {
 } from "recharts";
 import Sidebar from "../components/Sidebar";
 import ResidenceMap from "../components/ResidenceMap";
+import TopNavbar from "../components/TopNavbar";
 
 // ----- API -----
 const API_BASE_URL =
@@ -58,6 +60,7 @@ const townToArea = {
   רמלה: "CENTER",
   לוד: "CENTER",
   "תל אביב": "CENTER",
+
   נהריה: "NORTH",
 };
 
@@ -251,6 +254,8 @@ function SeriesLegend({ primaryLabel }) {
 }
 
 export default function Report3() {
+  const navigate = useNavigate();
+
   const [menuOpen, setMenuOpen] = useState(false);
 
   const [campus, setCampus] = useState("ALL");
@@ -265,6 +270,15 @@ export default function Report3() {
   const [hoveredTown, setHoveredTown] = useState(null);
 
   const googleMapsApiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -346,40 +360,10 @@ export default function Report3() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
+      <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((prev) => !prev)} />
 
-      <div className="mx-auto max-w-7xl px-6 pt-8 pb-14">
-        <div className="grid grid-cols-3 items-start">
-          <div className="justify-self-start">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              className="rounded-full p-3 text-white/90 hover:bg-white/10 -mt-2"
-              aria-label="פתיחת תפריט"
-            >
-              <span className="text-2xl leading-none">≡</span>
-            </button>
-          </div>
-
-          <div className="justify-self-center text-center">
-            <div className="mx-auto inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/10">
-              <img
-                src="/SCE_logo.png"
-                alt="SCE"
-                className="h-10 w-auto"
-                onError={(e) => {
-                  e.currentTarget.style.display = "none";
-                }}
-              />
-            </div>
-            <div className="mt-2 text-[12px] text-white/75">
-              המכללה האקדמית להנדסה ע״ש סמי שמעון
-            </div>
-          </div>
-
-          <div />
-        </div>
-
+      <div className="mx-auto max-w-7xl px-6 pt-28 pb-14">
         <div className="mt-6 text-center">
           <div className="inline-flex items-center justify-center gap-3 align-middle">
             <IcoTitle />
@@ -459,7 +443,6 @@ export default function Report3() {
         </div>
 
         <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
-          {/* CHART */}
           <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">
@@ -549,7 +532,6 @@ export default function Report3() {
             <div className="mt-3 text-xs text-slate-200/70"></div>
           </div>
 
-          {/* MAP */}
           <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
             <div className="mb-4 flex items-center justify-between gap-3">
               <div className="flex items-center gap-2">

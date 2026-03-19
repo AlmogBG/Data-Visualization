@@ -10,6 +10,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import Sidebar from "../components/Sidebar";
+import TopNavbar from "../components/TopNavbar";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://localhost:10000";
@@ -32,13 +33,15 @@ const months = [
 
 const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(n);
 const calcDelta = (curr, prev) => curr - prev;
-const calcDeltaPct = (curr, prev) => (prev === 0 ? 0 : ((curr - prev) / prev) * 100);
+const calcDeltaPct = (curr, prev) =>
+  prev === 0 ? 0 : ((curr - prev) / prev) * 100;
 const fmtPct = (n) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
 
 function seededRand(seed) {
-  let x = Math.sin(seed) * 10000;
+  const x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
 }
+
 function genRandomValue(seed, min, max) {
   const r = seededRand(seed);
   return Math.floor(min + r * (max - min + 1));
@@ -51,15 +54,15 @@ function getMonthsLabel(selectedMonths) {
 }
 
 function generateMonthlySeries(yearKey) {
-  const yearSeed = [...String(yearKey)].reduce((acc, ch) => acc + ch.charCodeAt(0), 0);
+  const yearSeed = [...String(yearKey)].reduce(
+    (acc, ch) => acc + ch.charCodeAt(0),
+    0
+  );
 
-  const arr = Array.from({ length: 12 }, (_, i) => {
+  return Array.from({ length: 12 }, (_, i) => {
     const monthIndex = i + 1;
-    const value = genRandomValue(yearSeed * 97 + monthIndex * 13, 90, 520);
-    return value;
+    return genRandomValue(yearSeed * 97 + monthIndex * 13, 90, 520);
   });
-
-  return arr;
 }
 
 function buildMockCumulativeData({ yearA, yearB, selectedMonths }) {
@@ -77,7 +80,7 @@ function buildMockCumulativeData({ yearA, yearB, selectedMonths }) {
   let cumA = 0;
   let cumB = 0;
 
-  const data = chosenMonthKeys.map((mKey) => {
+  return chosenMonthKeys.map((mKey) => {
     const idx = Number(mKey) - 1;
 
     cumA += monthlyA[idx];
@@ -90,8 +93,6 @@ function buildMockCumulativeData({ yearA, yearB, selectedMonths }) {
       yearB: cumB,
     };
   });
-
-  return data;
 }
 
 function CustomTooltip({ active, payload, label }) {
@@ -104,7 +105,11 @@ function CustomTooltip({ active, payload, label }) {
   const deltaPct = calcDeltaPct(selected, compare);
 
   const deltaColor =
-    delta > 0 ? "text-emerald-300" : delta < 0 ? "text-rose-300" : "text-slate-200";
+    delta > 0
+      ? "text-emerald-300"
+      : delta < 0
+      ? "text-rose-300"
+      : "text-slate-200";
 
   return (
     <div className="rounded-xl border border-slate-700/40 bg-slate-950/90 p-3 text-slate-100 shadow-lg">
@@ -113,10 +118,12 @@ function CustomTooltip({ active, payload, label }) {
         נבחר (מצטבר): <span className="font-semibold">{fmtInt(selected)}</span>
       </div>
       <div className="text-sm text-slate-200">
-        להשוואה (מצטבר): <span className="font-semibold">{fmtInt(compare)}</span>
+        להשוואה (מצטבר):{" "}
+        <span className="font-semibold">{fmtInt(compare)}</span>
       </div>
       <div className={`mt-1 text-sm ${deltaColor}`}>
-        שינוי: <span className="font-semibold">{fmtInt(delta)}</span> ({fmtPct(deltaPct)})
+        שינוי: <span className="font-semibold">{fmtInt(delta)}</span> (
+        {fmtPct(deltaPct)})
       </div>
     </div>
   );
@@ -142,16 +149,17 @@ function CustomLegend({ payload }) {
 
 export default function Report1() {
   const [menuOpen, setMenuOpen] = useState(false);
-
   const [yearA, setYearA] = useState("תשפ״ד");
   const [yearB, setYearB] = useState("תשפ״ה");
   const [selectedMonths, setSelectedMonths] = useState(["ALL"]);
-
   const [chartData, setChartData] = useState([]);
   const [apiMode, setApiMode] = useState("mock");
   const [loading, setLoading] = useState(false);
 
-  const monthsLabel = useMemo(() => getMonthsLabel(selectedMonths), [selectedMonths]);
+  const monthsLabel = useMemo(
+    () => getMonthsLabel(selectedMonths),
+    [selectedMonths]
+  );
 
   useEffect(() => {
     let cancelled = false;
@@ -213,6 +221,7 @@ export default function Report1() {
     return chartData.map((d) => {
       const delta = calcDelta(d.yearB, d.yearA);
       const deltaPct = calcDeltaPct(d.yearB, d.yearA);
+
       return {
         month: d.month,
         selected: d.yearB,
@@ -228,50 +237,25 @@ export default function Report1() {
       setSelectedMonths(["ALL"]);
       return;
     }
+
     setSelectedMonths((prev) => {
       const clean = prev.includes("ALL") ? [] : prev;
+
       if (clean.includes(mKey)) {
         const next = clean.filter((x) => x !== mKey);
         return next.length === 0 ? ["ALL"] : next;
       }
+
       return [...clean, mKey];
     });
   };
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
+      <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-14">
-        <div className="grid grid-cols-3 items-start">
-          <div className="justify-self-start">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              className="rounded-full p-3 text-white/90 hover:bg-white/10 -mt-2"
-              aria-label="פתיחת תפריט"
-            >
-              <span className="text-2xl leading-none">≡</span>
-            </button>
-          </div>
-
-          <div className="justify-self-center text-center">
-            <div className="mx-auto inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/10">
-              <img
-                src="/SCE_logo.png"
-                alt="SCE"
-                className="h-10 w-auto"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            </div>
-            <div className="mt-2 text-[12px] text-white/75">
-              המכללה האקדמית להנדסה ע״ש סמי שמעון
-            </div>
-          </div>
-
-          <div />
-        </div>
-
+      <div className="mx-auto max-w-6xl px-6 pt-28 pb-14">
         <div className="mt-6 text-center">
           <h1 className="text-3xl font-extrabold tracking-tight">
             📈 דוח 1 - השוואת נרשמים לפי חודשים / שנים
@@ -280,7 +264,9 @@ export default function Report1() {
             השוואה: <span className="font-semibold">{yearB}</span> מול{" "}
             <span className="font-semibold">{yearA}</span> | חודשים:{" "}
             <span className="font-semibold">{monthsLabel}</span>
-            <span className="mx-2 font-semibold">{apiMode === "api" ? "API" : "MOCK"}</span>
+            <span className="mx-2 font-semibold">
+              {apiMode === "api" ? "API" : "MOCK"}
+            </span>
             {loading ? <span className="mr-2">(טוען...)</span> : null}
           </p>
         </div>
@@ -313,6 +299,7 @@ export default function Report1() {
           <div className="flex flex-wrap justify-center gap-2">
             {months.map((m) => {
               const active = selectedMonths.includes(m.key);
+
               return (
                 <button
                   key={m.key}
@@ -335,16 +322,26 @@ export default function Report1() {
         <div className="mt-8 flex flex-col gap-6 lg:flex-row-reverse">
           <div className="w-full lg:w-[40%]">
             <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
-              <div className="mb-4 text-lg font-bold">📋 סיכום חודשי מצטבר (השוואה)</div>
+              <div className="mb-4 text-lg font-bold">
+                📋 סיכום חודשי מצטבר (השוואה)
+              </div>
 
               <div className="overflow-hidden rounded-2xl bg-[#2e3038] ring-1 ring-white/10">
                 <table className="w-full text-sm">
                   <thead className="bg-white/5">
                     <tr className="text-slate-200/90">
-                      <th className="px-4 py-3 text-right font-semibold">חודש</th>
-                      <th className="px-4 py-3 text-left font-semibold">{yearB}</th>
-                      <th className="px-4 py-3 text-left font-semibold">{yearA}</th>
-                      <th className="px-4 py-3 text-left font-semibold">% שינוי</th>
+                      <th className="px-4 py-3 text-right font-semibold">
+                        חודש
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        {yearB}
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        {yearA}
+                      </th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        % שינוי
+                      </th>
                     </tr>
                   </thead>
 
@@ -363,12 +360,22 @@ export default function Report1() {
 
                       return (
                         <tr key={r.month} className="border-t border-white/5">
-                          <td className="px-4 py-3 font-medium text-slate-50">{r.month}</td>
-                          <td className="px-4 py-3 text-left text-slate-100">{fmtInt(r.selected)}</td>
-                          <td className="px-4 py-3 text-left text-slate-100">{fmtInt(r.compare)}</td>
-                          <td className={`px-4 py-3 text-left font-semibold ${pctColor}`}>
+                          <td className="px-4 py-3 font-medium text-slate-50">
+                            {r.month}
+                          </td>
+                          <td className="px-4 py-3 text-left text-slate-100">
+                            {fmtInt(r.selected)}
+                          </td>
+                          <td className="px-4 py-3 text-left text-slate-100">
+                            {fmtInt(r.compare)}
+                          </td>
+                          <td
+                            className={`px-4 py-3 text-left font-semibold ${pctColor}`}
+                          >
                             <span className="inline-flex items-center gap-2">
-                              <span className="text-base leading-none">{pctIcon}</span>
+                              <span className="text-base leading-none">
+                                {pctIcon}
+                              </span>
                               <span>{fmtPct(r.deltaPct)}</span>
                             </span>
                           </td>
@@ -387,12 +394,20 @@ export default function Report1() {
 
           <div className="w-full lg:w-[60%]">
             <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
-              <div className="mb-4 text-lg font-bold">📉 נרשמים מצטברים לפי חודשים</div>
+              <div className="mb-4 text-lg font-bold">
+                📉 נרשמים מצטברים לפי חודשים
+              </div>
 
               <div className="rounded-2xl bg-[#2e3038] p-4 ring-1 ring-white/10">
                 <ResponsiveContainer width="100%" height={420}>
-                  <LineChart data={chartData} margin={{ top: 10, right: 20, left: 10, bottom: 10 }}>
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                  <LineChart
+                    data={chartData}
+                    margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="rgba(255,255,255,0.08)"
+                    />
 
                     <XAxis
                       dataKey="month"
@@ -435,7 +450,8 @@ export default function Report1() {
               </div>
 
               <div className="mt-3 text-xs text-white/60">
-                * הגרף מציג סכום מצטבר (Cumulative) כדי לראות מגמה שנתית וקצב צמיחה.
+                * הגרף מציג סכום מצטבר (Cumulative) כדי לראות מגמה שנתית וקצב
+                צמיחה.
               </div>
             </div>
           </div>

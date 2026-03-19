@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   ResponsiveContainer,
   CartesianGrid,
@@ -15,6 +16,7 @@ import {
   Cell,
 } from "recharts";
 import Sidebar from "../components/Sidebar";
+import TopNavbar from "../components/TopNavbar";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://localhost:10000";
@@ -251,7 +253,7 @@ function PieTooltip({ active, payload, label }) {
         כמות: <span className="font-semibold">{fmtInt(p?.value ?? 0)}</span>
       </div>
       {total ? (
-        <div className="text-xs text-white/60 mt-1">
+        <div className="mt-1 text-xs text-white/60">
           מתוך {fmtInt(total)} סה"כ
         </div>
       ) : null}
@@ -346,6 +348,8 @@ function PieCard({ title, data }) {
 }
 
 export default function Report4() {
+  const navigate = useNavigate();
+
   const [menuOpen, setMenuOpen] = useState(false);
   const [campus, setCampus] = useState("BOTH");
   const [year, setYear] = useState("תשפ״ה");
@@ -361,6 +365,15 @@ export default function Report4() {
     () => getMonthsLabel(selectedMonths),
     [selectedMonths]
   );
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -479,38 +492,10 @@ export default function Report4() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
+      <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-14">
-        <div className="grid grid-cols-3 items-start">
-          <div className="justify-self-start">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              className="rounded-full p-3 text-white/90 hover:bg-white/10 -mt-2"
-              aria-label="פתיחת תפריט"
-            >
-              <span className="text-2xl leading-none">≡</span>
-            </button>
-          </div>
-
-          <div className="justify-self-center text-center">
-            <div className="mx-auto inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/10">
-              <img
-                src="/SCE_logo.png"
-                alt="SCE"
-                className="h-10 w-auto"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            </div>
-            <div className="mt-2 text-[12px] text-white/75">
-              המכללה האקדמית להנדסה ע״ש סמי שמעון
-            </div>
-          </div>
-
-          <div />
-        </div>
-
+      <div className="mx-auto max-w-6xl px-6 pt-28 pb-14">
         <div className="mt-6 text-center">
           <div className="inline-flex items-center gap-3">
             <IcoReportTitle />
@@ -767,4 +752,3 @@ export default function Report4() {
     </div>
   );
 }
-

@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Sidebar from "../components/Sidebar";
@@ -12,6 +12,15 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const navigate = useNavigate();
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    if (token) {
+      navigate("/home", { replace: true });
+    }
+  }, [navigate]);
 
   const handleSubmit = async (e) => {
     e.preventDefault();
@@ -35,10 +44,21 @@ export default function LoginPage() {
         return;
       }
 
+      localStorage.setItem(
+        "user",
+        JSON.stringify({
+          username: data.username,
+          email: data.email,
+          role: data.role,
+          fullName: data.fullName,
+        })
+      );
       localStorage.setItem("token", data.token);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("loggedInUsername", data.username || username);
+      localStorage.setItem("loggedInEmail", data.email || "");
+      localStorage.setItem("loggedInRole", data.role || "");
 
-      navigate("/home");
+      navigate("/home", { replace: true });
     } catch (error) {
       console.error("Login error:", error);
       alert("שגיאה בחיבור לשרת");
@@ -50,7 +70,10 @@ export default function LoginPage() {
       dir="rtl"
       className="min-h-screen bg-[#2e3038] text-white overflow-hidden relative"
     >
-      <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((prev) => !prev)} />
+      <Sidebar
+        isOpen={menuOpen}
+        onToggle={() => setMenuOpen((prev) => !prev)}
+      />
 
       <div className="absolute inset-0 pointer-events-none">
         <div className="absolute top-[18%] left-1/2 -translate-x-1/2 h-56 w-56 rounded-full bg-sky-500/10 blur-3xl" />

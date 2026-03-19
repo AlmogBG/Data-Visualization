@@ -1,6 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
-import { Link } from "react-router-dom";
-
+import TopNavbar from "../components/TopNavbar";
 import {
   HiOutlineChartBar,
   HiOutlineUserGroup,
@@ -12,8 +11,12 @@ import Sidebar from "../components/Sidebar";
 import { getHomeSummary } from "../api/metricsApi";
 
 function trendFromDelta(deltaPct) {
-  if (deltaPct > 0) return { type: "up", text: `+${deltaPct}% לעומת חודש קודם` };
-  if (deltaPct < 0) return { type: "down", text: `${deltaPct}% לעומת חודש קודם` };
+  if (deltaPct > 0) {
+    return { type: "up", text: `+${deltaPct}% לעומת חודש קודם` };
+  }
+  if (deltaPct < 0) {
+    return { type: "down", text: `${deltaPct}% לעומת חודש קודם` };
+  }
   return { type: "neutral", text: "ללא שינוי" };
 }
 
@@ -62,6 +65,7 @@ export default function HomePage() {
         if (!cancelled) {
           setSummary({
             totalLeads: 0,
+            newLeads: 0,
             totalMeetings: 0,
             totalSales: 0,
             leadsInProgress: 0,
@@ -105,6 +109,7 @@ export default function HomePage() {
   const data = useMemo(() => {
     const s = summary || {
       totalLeads: 0,
+      newLeads: 0,
       totalMeetings: 0,
       totalSales: 0,
       leadsInProgress: 0,
@@ -201,52 +206,10 @@ export default function HomePage() {
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
+      <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
-      <div className="mx-auto max-w-6xl px-6 pt-8">
-        <div className="grid grid-cols-3 items-start">
-          <div className="justify-self-start">
-            <div className="flex items-start gap-3">
-              <button
-                type="button"
-                onClick={() => setMenuOpen(true)}
-                className="rounded-full p-3 text-white/90 hover:bg-white/10 -mt-2"
-                aria-label="פתיחת תפריט"
-              >
-                <span className="text-2xl leading-none">≡</span>
-              </button>
-
-              {/*<div className="text-right mt-2">
-                <Link
-                  to="/login"
-                  className="inline-flex items-center justify-center rounded-full bg-white px-6 py-2 text-sm font-bold text-slate-900 shadow-sm"
-                >
-                  אזור אישי
-                </Link>
-                <div className="mt-2 text-xs text-white/70">
-                  כניסת מנהל מערכת / הנהלת קמפוס
-                </div>
-              </div>*/}
-            </div>
-          </div>
-
-          <div className="justify-self-center text-center">
-            <div className="mx-auto inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/10">
-              <img
-                src="/SCE_logo.png"
-                alt="SCE"
-                className="h-10 w-auto"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            </div>
-            <div className="mt-2 text-[12px] text-white/75">
-              המכללה האקדמית להנדסה ע״ש סמי שמעון
-            </div>
-          </div>
-
-          <div className="justify-self-end" />
-        </div>
-
+      <div className="mx-auto max-w-6xl px-6 pt-28">
         <div className="mt-8 text-center">
           <h1 className="flex items-center justify-center gap-3 text-3xl font-extrabold tracking-tight">
             <HiOutlineChartBar className="text-4xl text-sky-300" />

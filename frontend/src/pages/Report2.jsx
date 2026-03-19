@@ -1,4 +1,5 @@
 import React, { useEffect, useMemo, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import {
   BarChart,
   Bar,
@@ -10,6 +11,7 @@ import {
   CartesianGrid,
 } from "recharts";
 import Sidebar from "../components/Sidebar";
+import TopNavbar from "../components/TopNavbar";
 
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://localhost:10000";
@@ -42,13 +44,15 @@ const months = [
 
 const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(n);
 const calcDelta = (curr, prev) => curr - prev;
-const calcDeltaPct = (curr, prev) => (prev === 0 ? 0 : ((curr - prev) / prev) * 100);
+const calcDeltaPct = (curr, prev) =>
+  prev === 0 ? 0 : ((curr - prev) / prev) * 100;
 const fmtPct = (n) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
 
 function seededRand(seed) {
   let x = Math.sin(seed) * 10000;
   return x - Math.floor(x);
 }
+
 function genRandomValue(seed, min, max) {
   const r = seededRand(seed);
   return Math.floor(min + r * (max - min + 1));
@@ -60,9 +64,6 @@ function getMonthsLabel(selectedMonths) {
   return selectedMonths.map((k) => map.get(k)).join(", ");
 }
 
-/* =========================
-    אייקונים עדינים + גודל דינמי
-   ========================= */
 function MiniIcon({ children, className = "", size = "h-4 w-4" }) {
   return (
     <svg
@@ -101,7 +102,12 @@ function IcoTitle() {
 function IcoTable() {
   return (
     <MiniIcon className="text-white/55">
-      <path d="M4 6h16v12H4V6Z" stroke="currentColor" strokeWidth="2" strokeLinejoin="round" />
+      <path
+        d="M4 6h16v12H4V6Z"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinejoin="round"
+      />
       <path d="M4 10h16" stroke="currentColor" strokeWidth="2" />
       <path d="M10 6v12" stroke="currentColor" strokeWidth="2" />
       <path d="M15 6v12" stroke="currentColor" strokeWidth="2" />
@@ -133,14 +139,15 @@ function TrendArrow({ dir }) {
       fill="currentColor"
       aria-hidden="true"
     >
-      {isUp ? <path d="M12 5l8 14H4l8-14Z" /> : <path d="M12 19 4 5h16l-8 14Z" />}
+      {isUp ? (
+        <path d="M12 5l8 14H4l8-14Z" />
+      ) : (
+        <path d="M12 19 4 5h16l-8 14Z" />
+      )}
     </svg>
   );
 }
 
-/* =========================
-   UI helpers
-   ========================= */
 function buildTableHeader(year, monthsLabel) {
   return (
     <div className="flex flex-col leading-tight">
@@ -159,12 +166,16 @@ function CustomTooltip({ active, payload, label, yearA, yearB, monthsLabel }) {
   const deltaPct = calcDeltaPct(selected, compare);
 
   const deltaColor =
-    delta > 0 ? "text-emerald-300" : delta < 0 ? "text-rose-300" : "text-slate-200";
+    delta > 0
+      ? "text-emerald-300"
+      : delta < 0
+      ? "text-rose-300"
+      : "text-slate-200";
 
   return (
     <div className="rounded-xl border border-slate-700/40 bg-slate-950/90 p-3 text-slate-100 shadow-lg">
       <div className="mb-1 font-bold">{label}</div>
-      <div className="text-xs text-white/60 mb-2">{monthsLabel}</div>
+      <div className="mb-2 text-xs text-white/60">{monthsLabel}</div>
 
       <div className="text-sm text-slate-200">
         {yearB}: <span className="font-semibold">{fmtInt(selected)}</span>
@@ -202,7 +213,10 @@ function CustomXAxisTick({ x, y, payload }) {
   const text = payload?.value ?? "";
   const words = String(text).split(" ");
   const mid = Math.ceil(words.length / 2);
-  const lines = [words.slice(0, mid).join(" "), words.slice(mid).join(" ")].filter(Boolean);
+  const lines = [
+    words.slice(0, mid).join(" "),
+    words.slice(mid).join(" "),
+  ].filter(Boolean);
 
   return (
     <g transform={`translate(${x},${y})`}>
@@ -253,22 +267,39 @@ function buildMockChartData({ yearA, yearB, selectedMonths }) {
 
     const baseA = genRandomValue(seedA, 80, 450) * monthFactor;
     const baseB = Math.max(0, baseA + genRandomValue(seedB, -120, 160));
-    return { department: dep, yearA: baseA, yearB: baseB };
+
+    return {
+      department: dep,
+      yearA: baseA,
+      yearB: baseB,
+    };
   });
 }
 
 export default function Report2() {
-  const [menuOpen, setMenuOpen] = useState(false);
+  const navigate = useNavigate();
 
+  const [menuOpen, setMenuOpen] = useState(false);
   const [yearA, setYearA] = useState("תשפ״ד");
   const [yearB, setYearB] = useState("תשפ״ה");
   const [selectedMonths, setSelectedMonths] = useState(["ALL"]);
-
   const [chartData, setChartData] = useState([]);
   const [apiMode, setApiMode] = useState("mock");
   const [loading, setLoading] = useState(false);
 
-  const monthsLabel = useMemo(() => getMonthsLabel(selectedMonths), [selectedMonths]);
+  const monthsLabel = useMemo(
+    () => getMonthsLabel(selectedMonths),
+    [selectedMonths]
+  );
+
+  useEffect(() => {
+    const token =
+      localStorage.getItem("token") || sessionStorage.getItem("token");
+
+    if (!token) {
+      navigate("/login", { replace: true });
+    }
+  }, [navigate]);
 
   useEffect(() => {
     let cancelled = false;
@@ -331,7 +362,14 @@ export default function Report2() {
       .map((d) => {
         const delta = calcDelta(d.yearB, d.yearA);
         const deltaPct = calcDeltaPct(d.yearB, d.yearA);
-        return { department: d.department, selected: d.yearB, compare: d.yearA, delta, deltaPct };
+
+        return {
+          department: d.department,
+          selected: d.yearB,
+          compare: d.yearA,
+          delta,
+          deltaPct,
+        };
       })
       .sort((x, y) => y.selected - x.selected);
   }, [chartData]);
@@ -341,54 +379,29 @@ export default function Report2() {
       setSelectedMonths(["ALL"]);
       return;
     }
+
     setSelectedMonths((prev) => {
       const clean = prev.includes("ALL") ? [] : prev;
+
       if (clean.includes(mKey)) {
         const next = clean.filter((x) => x !== mKey);
         return next.length === 0 ? ["ALL"] : next;
       }
+
       return [...clean, mKey];
     });
   };
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
+      <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
-      <div className="mx-auto max-w-6xl px-6 pt-8 pb-14">
-        <div className="grid grid-cols-3 items-start">
-          <div className="justify-self-start">
-            <button
-              type="button"
-              onClick={() => setMenuOpen(true)}
-              className="rounded-full p-3 text-white/90 hover:bg-white/10 -mt-2"
-              aria-label="פתיחת תפריט"
-            >
-              <span className="text-2xl leading-none">≡</span>
-            </button>
-          </div>
-
-          <div className="justify-self-center text-center">
-            <div className="mx-auto inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/10">
-              <img
-                src="/SCE_logo.png"
-                alt="SCE"
-                className="h-10 w-auto"
-                onError={(e) => (e.currentTarget.style.display = "none")}
-              />
-            </div>
-            <div className="mt-2 text-[12px] text-white/75">
-              המכללה האקדמית להנדסה ע״ש סמי שמעון
-            </div>
-          </div>
-
-          <div />
-        </div>
-
+      <div className="mx-auto max-w-6xl px-6 pt-28 pb-14">
         <div className="mt-6 text-center">
           <div className="inline-flex items-center justify-center gap-3 align-middle">
             <IcoTitle />
-            <h1 className="text-3xl font-extrabold tracking-tight leading-none">
+            <h1 className="leading-none text-3xl font-extrabold tracking-tight">
               דוח 2 - ביקושי המחלקות של הנרשמים למכללה בהשוואה לשנים האחרונות
             </h1>
           </div>
@@ -397,7 +410,9 @@ export default function Report2() {
             השוואה: <span className="font-semibold">{yearB}</span> מול{" "}
             <span className="font-semibold">{yearA}</span> | חודשים:{" "}
             <span className="font-semibold">{monthsLabel}</span>
-            <span className="mx-2 font-semibold">{apiMode === "api" ? "API" : "MOCK"}</span>
+            <span className="mx-2 font-semibold">
+              {apiMode === "api" ? "API" : "MOCK"}
+            </span>
             {loading ? <span className="mr-2">(טוען...)</span> : null}
           </p>
         </div>
@@ -430,6 +445,7 @@ export default function Report2() {
           <div className="flex flex-wrap justify-center gap-2">
             {months.map((m) => {
               const active = selectedMonths.includes(m.key);
+
               return (
                 <button
                   key={m.key}
@@ -486,10 +502,19 @@ export default function Report2() {
                       const dir = pos ? "up" : neg ? "down" : "neutral";
 
                       return (
-                        <tr key={r.department} className="border-t border-white/5">
-                          <td className="px-4 py-3 font-medium text-slate-50">{r.department}</td>
-                          <td className="px-4 py-3 text-left text-slate-100">{fmtInt(r.selected)}</td>
-                          <td className="px-4 py-3 text-left text-slate-100">{fmtInt(r.compare)}</td>
+                        <tr
+                          key={r.department}
+                          className="border-t border-white/5"
+                        >
+                          <td className="px-4 py-3 font-medium text-slate-50">
+                            {r.department}
+                          </td>
+                          <td className="px-4 py-3 text-left text-slate-100">
+                            {fmtInt(r.selected)}
+                          </td>
+                          <td className="px-4 py-3 text-left text-slate-100">
+                            {fmtInt(r.compare)}
+                          </td>
 
                           <td className={`px-4 py-3 text-left font-semibold ${pctColor}`}>
                             <div className="flex items-center justify-end gap-2">
@@ -527,7 +552,10 @@ export default function Report2() {
                     barCategoryGap="6%"
                     barGap={10}
                   >
-                    <CartesianGrid strokeDasharray="3 3" stroke="rgba(255,255,255,0.08)" />
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="rgba(255,255,255,0.08)"
+                    />
 
                     <XAxis
                       dataKey="department"
@@ -548,7 +576,13 @@ export default function Report2() {
                     />
 
                     <Tooltip
-                      content={<CustomTooltip yearA={yearA} yearB={yearB} monthsLabel={monthsLabel} />}
+                      content={
+                        <CustomTooltip
+                          yearA={yearA}
+                          yearB={yearB}
+                          monthsLabel={monthsLabel}
+                        />
+                      }
                       cursor={<CustomCursor />}
                     />
 
@@ -560,7 +594,10 @@ export default function Report2() {
                       fill="rgba(96,165,250,0.85)"
                       radius={[8, 8, 0, 0]}
                       barSize={38}
-                      activeBar={{ stroke: "rgba(255,255,255,0.45)", strokeWidth: 2 }}
+                      activeBar={{
+                        stroke: "rgba(255,255,255,0.45)",
+                        strokeWidth: 2,
+                      }}
                     />
                     <Bar
                       dataKey="yearA"
@@ -568,7 +605,10 @@ export default function Report2() {
                       fill="rgba(148,163,184,0.55)"
                       radius={[8, 8, 0, 0]}
                       barSize={38}
-                      activeBar={{ stroke: "rgba(255,255,255,0.35)", strokeWidth: 2 }}
+                      activeBar={{
+                        stroke: "rgba(255,255,255,0.35)",
+                        strokeWidth: 2,
+                      }}
                     />
                   </BarChart>
                 </ResponsiveContainer>
