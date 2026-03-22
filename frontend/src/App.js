@@ -3,6 +3,8 @@ import { Routes, Route, Navigate } from "react-router-dom";
 
 import LoginPage from "./pages/LoginPage";
 import HomePage from "./pages/HomePage";
+import EditProfilePage from "./pages/EditProfilePage";
+import ConsultationPage from "./pages/ConsultationPage";
 import Report1 from "./pages/Report1";
 import Report2 from "./pages/Report2";
 import Report3 from "./pages/Report3";
@@ -21,6 +23,24 @@ export default function App() {
         element={
           <ProtectedRoute>
             <HomePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/profile/edit"
+        element={
+          <ProtectedRoute>
+            <EditProfilePage />
+          </ProtectedRoute>
+        }
+      />
+
+      <Route
+        path="/consultation"
+        element={
+          <ProtectedRoute>
+            <ConsultationPage />
           </ProtectedRoute>
         }
       />

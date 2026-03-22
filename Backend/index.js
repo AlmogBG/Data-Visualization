@@ -4,6 +4,7 @@ const express = require("express");
 const cors = require("cors");
 
 const authRoutes = require("./src/routes/authRoutes");
+const consultationRoutes = require("./src/routes/consultationRoutes");
 const { getLeadsByCity } = require("./src/controllers/statsController");
 const { getHomeSummary } = require("./src/controllers/homeController");
 const { getReport1Comparison } = require("./src/controllers/report1Controller");
@@ -40,6 +41,7 @@ app.get("/api/home/summary", getHomeSummary);
 
 app.use("/api/auth", authRoutes);
 app.use("/auth", authRoutes);
+app.use("/api", consultationRoutes);
 
 app.get("/api/stats", (req, res) => {
   return res.json({
@@ -71,12 +73,10 @@ app.listen(PORT, () => {
   console.log("GET /health");
   console.log("GET /api/home/summary");
   console.log("POST /api/auth/login");
-  console.log("POST /auth/login");
-  console.log("GET /api/stats");
-  console.log("GET /api/stats/cities");
-  console.log("GET /api/report1/comparison");
-  console.log("GET /api/report2/comparison");
-  console.log("GET /api/report4/monthly");
-  console.log("GET /api/report4/outcomes");
-  console.log("GET /api/report5/media");
+  console.log("GET /api/form/options");
+  console.log("GET /api/leads/search");
+  console.log("POST /api/leads");
+  console.log("POST /api/consultations");
+  console.log("GET /api/consultations/lead/:leadId");
+  console.log("PUT /api/consultations/:id");
 });

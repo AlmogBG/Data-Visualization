@@ -3,10 +3,12 @@ const router = express.Router();
 
 const {
   login,
-  updateProfile,
+  requestEmailChange,
+  verifyEmailChange,
 } = require("../controllers/authController");
 
 router.post("/login", login);
-router.put("/profile", updateProfile);
+router.post("/profile/request-email-change", requestEmailChange);
+router.post("/profile/verify-email-change", verifyEmailChange);
 
 module.exports = router;

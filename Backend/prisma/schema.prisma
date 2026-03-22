@@ -74,6 +74,7 @@ model Consultation {
   meetingDate DateTime? @map("meeting_date")
   outcome     String?
   arrived     Boolean?
+  notes       String?   @map("notes")
   createdAt   DateTime  @default(now()) @map("created_at")
 
   lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
