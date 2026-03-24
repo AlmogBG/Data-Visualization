@@ -65,10 +65,21 @@ function genRandomValue(seed, min, max) {
 
 const monthKeys = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
 
+function getYearSuffix(yearLabel) {
+  const map = {
+    'תשפ״ב': "22",
+    'תשפ״ג': "23",
+    'תשפ״ד': "24",
+    'תשפ״ה': "25",
+  };
+  return map[yearLabel] || "25";
+}
+
 function buildMockMonthly({ year, selectedMonths }) {
   const useAll = selectedMonths.includes("ALL");
   const picked = useAll ? monthKeys : selectedMonths.filter((m) => m !== "ALL");
   const list = picked.length ? picked : monthKeys;
+  const yearSuffix = getYearSuffix(year);
 
   return list.map((mKey, idx) => {
     const seedBase = year.length * 71 + Number(mKey) * 29 + idx * 13;
@@ -87,7 +98,7 @@ function buildMockMonthly({ year, selectedMonths }) {
 
     return {
       month: mKey,
-      label: `${mKey}/25`,
+      label: `${mKey}/${yearSuffix}`,
       invitedAshdod,
       invitedBeer,
       attendedAshdod,
@@ -483,7 +494,7 @@ export default function Report4() {
         return next.length === 0 ? ["ALL"] : next;
       }
 
-      return [...clean, mKey];
+      return [...clean, mKey].sort((a, b) => Number(a) - Number(b));
     });
   };
 

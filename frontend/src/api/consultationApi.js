@@ -9,6 +9,18 @@ async function handleJson(res, fallbackMessage) {
   return data;
 }
 
+export async function updateLead(id, payload) {
+  const res = await fetch(`${BASE_URL}/api/leads/${id}`, {
+    method: "PUT",
+    headers: {
+      "Content-Type": "application/json",
+    },
+    body: JSON.stringify(payload),
+  });
+
+  return handleJson(res, "שגיאה בעדכון מועמד");
+}
+
 export async function getConsultationFormOptions() {
   const res = await fetch(`${BASE_URL}/api/form/options`);
   return handleJson(res, "שגיאה בטעינת נתוני הטופס");

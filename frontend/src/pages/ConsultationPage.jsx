@@ -2,31 +2,42 @@ import React, { useEffect, useMemo, useState } from "react";
 import TopNavbar from "../components/TopNavbar";
 import Sidebar from "../components/Sidebar";
 import {
-  HiOutlineMagnifyingGlass,
-  HiOutlineUserPlus,
-  HiOutlineCalendarDays,
-  HiOutlineClipboardDocumentList,
-} from "react-icons/hi2";
-import {
   getConsultationFormOptions,
   searchLeads,
   createLead,
+  updateLead,
   createConsultation,
   getLeadConsultations,
   updateConsultation,
 } from "../api/consultationApi";
+import {
+  Search,
+  UserRound,
+  CalendarDays,
+  Phone,
+  Mail,
+  Building2,
+  MapPinned,
+  GraduationCap,
+  Map,
+  Megaphone,
+  Clock3,
+  FileText,
+  CheckCircle2,
+  XCircle,
+  RotateCcw,
+  Save,
+  Pencil,
+  Users,
+  ListChecks,
+  BadgeInfo,
+  SquarePen,
+  X,
+} from "lucide-react";
 
 const campusOptions = ["אשדוד", "באר שבע"];
 const areaOptions = ["דרום", "מרכז", "צפון", "שפלה", "ירושלים"];
-const sourceOptions = [
-  "פייסבוק",
-  "אינסטגרם",
-  "גוגל",
-  "אתר",
-  "טלפון",
-  "המלצה",
-  "אחר",
-];
+const sourceOptions = ["פייסבוק", "אינסטגרם", "גוגל", "אתר", "טלפון", "המלצה", "אחר"];
 
 const outcomeOptions = [
   { value: "", label: "ללא" },
@@ -45,32 +56,6 @@ const outcomeLabelMap = {
   FOLLOWUP: "מעקב",
   SELF_CONTACT: "פנייה עצמית",
   OTHER: "אחר",
-};
-
-const emptyLeadForm = {
-  fullName: "",
-  phone: "",
-  email: "",
-  campus: "",
-  area: "",
-  source: "",
-  departmentId: "",
-  cityId: "",
-};
-
-const emptyConsultationForm = {
-  meetingDate: "",
-  meetingTime: "",
-  outcome: "",
-  arrived: "",
-  notes: "",
-};
-
-const emptySearchForm = {
-  q: "",
-  phone: "",
-  email: "",
-  fullName: "",
 };
 
 function buildDateTimeValue(datePart, timePart) {
@@ -98,32 +83,117 @@ function isValidEmail(email) {
   return /^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(String(email).trim());
 }
 
-function inputClass(hasError, disabled = false) {
+function inputClass(hasError, disabled = false, hasIcon = false) {
   return [
-    "w-full rounded-2xl bg-white/10 px-4 py-3 text-white placeholder:text-white/35 outline-none ring-1 transition",
+    "w-full rounded-2xl bg-white/10 py-3 text-white placeholder:text-white/35 outline-none ring-1 transition",
+    hasIcon ? "pr-12 pl-4" : "px-4",
     hasError ? "ring-red-400/70 focus:ring-red-300" : "ring-white/10",
     disabled ? "disabled:opacity-70" : "",
   ].join(" ");
 }
 
-function Card({ title, icon: Icon, children, className = "" }) {
+function FieldIcon({ icon: Icon }) {
   return (
-    <section
-      className={[
-        "rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)]",
-        className,
-      ].join(" ")}
-    >
-      <div className="mb-5 flex items-center justify-between">
-        <div className="flex items-center gap-3">
-          <Icon className="text-2xl text-sky-300" />
-          <h2 className="text-2xl font-extrabold">{title}</h2>
-        </div>
-      </div>
-      {children}
-    </section>
+    <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/45">
+      <Icon size={18} />
+    </div>
   );
 }
+
+function InputField({
+  icon,
+  error,
+  disabled = false,
+  className = "",
+  ...props
+}) {
+  return (
+    <div>
+      <div className="relative">
+        <input
+          {...props}
+          disabled={disabled}
+          className={`${inputClass(!!error, disabled, true)} ${className}`}
+        />
+        <FieldIcon icon={icon} />
+      </div>
+      {error ? <div className="mt-1 text-sm text-red-300">{error}</div> : null}
+    </div>
+  );
+}
+
+function SelectField({
+  icon,
+  error,
+  disabled = false,
+  className = "",
+  children,
+  ...props
+}) {
+  return (
+    <div>
+      <div className="relative">
+        <select
+          {...props}
+          disabled={disabled}
+          className={`${inputClass(!!error, disabled, true)} appearance-none ${className}`}
+        >
+          {children}
+        </select>
+        <FieldIcon icon={icon} />
+      </div>
+      {error ? <div className="mt-1 text-sm text-red-300">{error}</div> : null}
+    </div>
+  );
+}
+
+function TextareaField({
+  icon,
+  error,
+  className = "",
+  ...props
+}) {
+  return (
+    <div>
+      <div className="relative">
+        <textarea
+          {...props}
+          className={`${inputClass(!!error, false, true)} min-h-[120px] resize-none ${className}`}
+        />
+        <div className="pointer-events-none absolute right-4 top-4 text-white/45">
+          {React.createElement(icon, { size: 18 })}
+        </div>
+      </div>
+      {error ? <div className="mt-1 text-sm text-red-300">{error}</div> : null}
+    </div>
+  );
+}
+
+const emptyLeadForm = {
+  fullName: "",
+  phone: "",
+  email: "",
+  campus: "",
+  area: "",
+  source: "",
+  departmentId: "",
+  cityId: "",
+};
+
+const emptyConsultationForm = {
+  meetingDate: "",
+  meetingTime: "",
+  outcome: "",
+  arrived: "",
+  notes: "",
+};
+
+const emptySearchForm = {
+  q: "",
+  phone: "",
+  email: "",
+  fullName: "",
+};
 
 export default function ConsultationPage() {
   const [menuOpen, setMenuOpen] = useState(false);
@@ -140,15 +210,14 @@ export default function ConsultationPage() {
   const [editingConsultationId, setEditingConsultationId] = useState(null);
 
   const [leadForm, setLeadForm] = useState(emptyLeadForm);
-  const [consultationForm, setConsultationForm] = useState(
-    emptyConsultationForm
-  );
+  const [consultationForm, setConsultationForm] = useState(emptyConsultationForm);
 
   const [leadErrors, setLeadErrors] = useState({});
   const [consultationErrors, setConsultationErrors] = useState({});
 
   const [savingLead, setSavingLead] = useState(false);
   const [savingConsultation, setSavingConsultation] = useState(false);
+  const [isEditingLead, setIsEditingLead] = useState(false);
 
   useEffect(() => {
     async function loadOptions() {
@@ -174,6 +243,17 @@ export default function ConsultationPage() {
     const data = await getLeadConsultations(leadId);
     setSelectedLead(data.lead);
     setConsultations(data.consultations || []);
+
+    setLeadForm({
+      fullName: data.lead?.fullName || "",
+      phone: data.lead?.phone || "",
+      email: data.lead?.email || "",
+      campus: data.lead?.campus || "",
+      area: data.lead?.area || "",
+      source: data.lead?.source || "",
+      departmentId: data.lead?.department?.id ? String(data.lead.department.id) : "",
+      cityId: data.lead?.city?.id ? String(data.lead.city.id) : "",
+    });
   }
 
   async function handleSearch() {
@@ -213,6 +293,7 @@ export default function ConsultationPage() {
       cityId: lead.city?.id ? String(lead.city.id) : "",
     });
 
+    setIsEditingLead(false);
     setLeadErrors({});
     setConsultations(lead.consultations || []);
   }
@@ -223,8 +304,11 @@ export default function ConsultationPage() {
     setSelectedLead(null);
     setConsultations([]);
     setEditingConsultationId(null);
+    setIsEditingLead(false);
     setLeadForm(emptyLeadForm);
     setLeadErrors({});
+    setConsultationForm(emptyConsultationForm);
+    setConsultationErrors({});
   }
 
   function handleClearConsultationForm() {
@@ -279,44 +363,102 @@ export default function ConsultationPage() {
     return Object.keys(errors).length === 0;
   }
 
-  async function handleCreateLead() {
+  function handleStartEditLead() {
+    if (!selectedLead?.id) return;
+    setIsEditingLead(true);
+  }
+
+  function handleCancelEditLead() {
+    if (!selectedLead) {
+      setIsEditingLead(false);
+      setLeadForm(emptyLeadForm);
+      setLeadErrors({});
+      return;
+    }
+
+    setLeadForm({
+      fullName: selectedLead.fullName || "",
+      phone: selectedLead.phone || "",
+      email: selectedLead.email || "",
+      campus: selectedLead.campus || "",
+      area: selectedLead.area || "",
+      source: selectedLead.source || "",
+      departmentId: selectedLead.department?.id ? String(selectedLead.department.id) : "",
+      cityId: selectedLead.city?.id ? String(selectedLead.city.id) : "",
+    });
+
+    setLeadErrors({});
+    setIsEditingLead(false);
+  }
+
+  async function handleSaveLead() {
     try {
       if (!validateLeadForm()) return;
 
       setSavingLead(true);
+
+      if (selectedLead?.id && isEditingLead) {
+        const data = await updateLead(selectedLead.id, leadForm);
+
+        setSelectedLead({
+          id: data.lead.id,
+          fullName: data.lead.fullName,
+          phone: data.lead.phone || "",
+          email: data.lead.email || "",
+          campus: data.lead.campus || "",
+          area: data.lead.area || "",
+          source: data.lead.source || "",
+          status: data.lead.status || "",
+          department: data.lead.department || null,
+          city: data.lead.city || null,
+        });
+
+        setLeadForm({
+          fullName: data.lead.fullName || "",
+          phone: data.lead.phone || "",
+          email: data.lead.email || "",
+          campus: data.lead.campus || "",
+          area: data.lead.area || "",
+          source: data.lead.source || "",
+          departmentId: data.lead.department?.id ? String(data.lead.department.id) : "",
+          cityId: data.lead.city?.id ? String(data.lead.city.id) : "",
+        });
+
+        setIsEditingLead(false);
+        alert("פרטי המועמד עודכנו בהצלחה");
+        return;
+      }
+
       const data = await createLead(leadForm);
+
       const lead = data.lead;
-
-      setLeadForm(emptyLeadForm);
-      setLeadErrors({});
-      setSelectedLead(null);
-      setConsultations([]);
-      setEditingConsultationId(null);
-
-      setSearchValues({
-        q: "",
+      setSelectedLead({
+        id: lead.id,
+        fullName: lead.fullName,
         phone: lead.phone || "",
         email: lead.email || "",
-        fullName: lead.fullName || "",
+        campus: lead.campus || "",
+        area: lead.area || "",
+        source: lead.source || "",
+        status: lead.status || "",
+        department: lead.department || null,
+        city: lead.city || null,
       });
 
-      setSearchResults([
-        {
-          id: lead.id,
-          fullName: lead.fullName,
-          phone: lead.phone || "",
-          email: lead.email || "",
-          campus: lead.campus || "",
-          area: lead.area || "",
-          status: lead.status || "",
-          source: lead.source || "",
-          department: lead.department || null,
-          city: lead.city || null,
-          consultations: [],
-        },
-      ]);
+      setLeadForm({
+        fullName: lead.fullName || "",
+        phone: lead.phone || "",
+        email: lead.email || "",
+        campus: lead.campus || "",
+        area: lead.area || "",
+        source: lead.source || "",
+        departmentId: lead.department?.id ? String(lead.department.id) : "",
+        cityId: lead.city?.id ? String(lead.city.id) : "",
+      });
 
-      alert("המועמד נוצר בהצלחה ונוסף לתוצאות החיפוש");
+      setConsultations([]);
+      setIsEditingLead(false);
+      alert("המועמד נוצר בהצלחה");
     } catch (error) {
       alert(error.message);
     } finally {
@@ -329,7 +471,6 @@ export default function ConsultationPage() {
       if (!validateConsultationForm()) return;
 
       const leadId = selectedLead?.id;
-
       setSavingConsultation(true);
 
       const payload = {
@@ -339,8 +480,7 @@ export default function ConsultationPage() {
           consultationForm.meetingTime
         ),
         outcome: consultationForm.outcome,
-        arrived:
-          consultationForm.arrived === "" ? null : consultationForm.arrived,
+        arrived: consultationForm.arrived === "" ? null : consultationForm.arrived,
         notes: consultationForm.notes,
       };
 
@@ -403,55 +543,61 @@ export default function ConsultationPage() {
       <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
-      <div className="mx-auto max-w-[1500px] px-6 pt-28 pb-14">
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-28">
         <div className="mt-8 text-center">
-          <h1 className="flex items-center justify-center gap-3 text-4xl font-extrabold tracking-tight">
-            <HiOutlineCalendarDays className="text-4xl text-sky-300" />
-            פגישת ייעוץ
-          </h1>
-          <p className="mt-3 text-base text-white/75">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 ring-1 ring-white/10">
+            <CalendarDays size={18} className="text-sky-300" />
+            <span className="text-sm font-semibold text-white/85">ניהול פגישות ייעוץ</span>
+          </div>
+
+          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">פגישת ייעוץ</h1>
+          <p className="mt-2 text-sm text-white/75">
             חיפוש מועמד, יצירת מועמד חדש, יצירת פגישה חדשה ועריכת פגישות קיימות
           </p>
         </div>
 
-        <div className="mt-10 grid grid-cols-1 gap-8 2xl:grid-cols-12">
-          <Card
-            title="חיפוש מועמד קיים"
-            icon={HiOutlineMagnifyingGlass}
-            className="2xl:col-span-4"
-          >
-            <div className="space-y-4">
-              <input
+        <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-3">
+          <div className="rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)] xl:col-span-1">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-sky-500/15 p-3 text-sky-300">
+                <Search size={22} />
+              </div>
+              <div className="text-xl font-extrabold">חיפוש מועמד קיים</div>
+            </div>
+
+            <div className="mt-5 space-y-4">
+              <InputField
+                icon={Search}
                 type="text"
                 placeholder="חיפוש כללי"
                 value={searchValues.q}
                 onChange={(e) =>
                   setSearchValues((prev) => ({ ...prev, q: e.target.value }))
                 }
-                className="w-full rounded-2xl bg-white/10 px-4 py-4 text-white placeholder:text-white/35 outline-none ring-1 ring-white/10"
               />
 
-              <input
+              <InputField
+                icon={Phone}
                 type="text"
                 placeholder="טלפון"
                 value={searchValues.phone}
                 onChange={(e) =>
                   setSearchValues((prev) => ({ ...prev, phone: e.target.value }))
                 }
-                className="w-full rounded-2xl bg-white/10 px-4 py-4 text-white placeholder:text-white/35 outline-none ring-1 ring-white/10"
               />
 
-              <input
+              <InputField
+                icon={Mail}
                 type="text"
                 placeholder="אימייל"
                 value={searchValues.email}
                 onChange={(e) =>
                   setSearchValues((prev) => ({ ...prev, email: e.target.value }))
                 }
-                className="w-full rounded-2xl bg-white/10 px-4 py-4 text-white placeholder:text-white/35 outline-none ring-1 ring-white/10"
               />
 
-              <input
+              <InputField
+                icon={UserRound}
                 type="text"
                 placeholder="שם מלא"
                 value={searchValues.fullName}
@@ -461,35 +607,37 @@ export default function ConsultationPage() {
                     fullName: e.target.value,
                   }))
                 }
-                className="w-full rounded-2xl bg-white/10 px-4 py-4 text-white placeholder:text-white/35 outline-none ring-1 ring-white/10"
               />
 
-              <div className="flex gap-3 pt-1">
+              <div className="flex gap-3">
                 <button
                   type="button"
                   onClick={handleSearch}
                   disabled={searching}
-                  className="w-full rounded-2xl bg-sky-500/20 px-4 py-4 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
                 >
+                  <Search size={18} />
                   {searching ? "מחפש..." : "חפש מועמד"}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleClearSearchAndLeadSection}
-                  className="w-full rounded-2xl bg-white/10 px-4 py-4 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
                 >
+                  <RotateCcw size={18} />
                   נקה טופס
                 </button>
               </div>
             </div>
 
-            <div className="mt-8">
-              <div className="mb-3 text-sm font-bold text-white/80">
-                תוצאות חיפוש
+            <div className="mt-6">
+              <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white/80">
+                <Users size={16} className="text-white/60" />
+                <span>תוצאות חיפוש</span>
               </div>
 
-              <div className="max-h-[320px] space-y-3 overflow-y-auto pr-1">
+              <div className="space-y-3">
                 {searchResults.map((lead) => (
                   <button
                     key={lead.id}
@@ -497,32 +645,58 @@ export default function ConsultationPage() {
                     onClick={() => handleSelectLead(lead)}
                     className="w-full rounded-2xl bg-white/5 p-4 text-right ring-1 ring-white/10 transition hover:bg-white/10"
                   >
-                    <div className="text-lg font-bold">{lead.fullName}</div>
-                    <div className="mt-1 text-sm text-white/70">
-                      {lead.email || "-"} | {lead.phone || "-"}
-                    </div>
-                    <div className="mt-1 text-xs text-white/55">
-                      {lead.department?.name || "-"} | {lead.city?.town || "-"}
+                    <div className="flex items-start gap-3">
+                      <div className="mt-1 rounded-xl bg-white/10 p-2 text-sky-300">
+                        <UserRound size={16} />
+                      </div>
+
+                      <div className="flex-1">
+                        <div className="font-bold">{lead.fullName}</div>
+                        <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-white/70">
+                          <span className="inline-flex items-center gap-1">
+                            <Phone size={14} />
+                            {lead.phone || "-"}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <Mail size={14} />
+                            {lead.email || "-"}
+                          </span>
+                        </div>
+                        <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/55">
+                          <span className="inline-flex items-center gap-1">
+                            <GraduationCap size={13} />
+                            {lead.department?.name || "-"}
+                          </span>
+                          <span className="inline-flex items-center gap-1">
+                            <MapPinned size={13} />
+                            {lead.city?.town || "-"}
+                          </span>
+                        </div>
+                      </div>
                     </div>
                   </button>
                 ))}
 
                 {!searching && searchResults.length === 0 ? (
-                  <div className="rounded-2xl bg-white/5 p-5 text-sm text-white/60 ring-1 ring-white/10">
+                  <div className="rounded-2xl bg-white/5 p-4 text-sm text-white/60 ring-1 ring-white/10">
                     אין תוצאות להצגה
                   </div>
                 ) : null}
               </div>
             </div>
-          </Card>
+          </div>
 
-          <Card
-            title="פרטי מועמד"
-            icon={HiOutlineUserPlus}
-            className="2xl:col-span-4"
-          >
-            <div className="grid grid-cols-1 gap-3">
-              <input
+          <div className="rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)] xl:col-span-1">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-300">
+                <UserRound size={22} />
+              </div>
+              <div className="text-xl font-extrabold">פרטי מועמד</div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3">
+              <InputField
+                icon={UserRound}
                 type="text"
                 placeholder="שם מלא"
                 value={leadForm.fullName}
@@ -530,14 +704,12 @@ export default function ConsultationPage() {
                   setLeadForm((prev) => ({ ...prev, fullName: e.target.value }));
                   setLeadErrors((prev) => ({ ...prev, fullName: "" }));
                 }}
-                disabled={isExistingLead}
-                className={inputClass(!!leadErrors.fullName, isExistingLead)}
+                disabled={isExistingLead && !isEditingLead}
+                error={leadErrors.fullName}
               />
-              {leadErrors.fullName ? (
-                <div className="text-sm text-red-300">{leadErrors.fullName}</div>
-              ) : null}
 
-              <input
+              <InputField
+                icon={Phone}
                 type="text"
                 placeholder="טלפון"
                 value={leadForm.phone}
@@ -545,14 +717,12 @@ export default function ConsultationPage() {
                   setLeadForm((prev) => ({ ...prev, phone: e.target.value }));
                   setLeadErrors((prev) => ({ ...prev, phone: "" }));
                 }}
-                disabled={isExistingLead}
-                className={inputClass(!!leadErrors.phone, isExistingLead)}
+                disabled={isExistingLead && !isEditingLead}
+                error={leadErrors.phone}
               />
-              {leadErrors.phone ? (
-                <div className="text-sm text-red-300">{leadErrors.phone}</div>
-              ) : null}
 
-              <input
+              <InputField
+                icon={Mail}
                 type="email"
                 placeholder="אימייל"
                 value={leadForm.email}
@@ -560,80 +730,66 @@ export default function ConsultationPage() {
                   setLeadForm((prev) => ({ ...prev, email: e.target.value }));
                   setLeadErrors((prev) => ({ ...prev, email: "" }));
                 }}
-                disabled={isExistingLead}
-                className={inputClass(!!leadErrors.email, isExistingLead)}
+                disabled={isExistingLead && !isEditingLead}
+                error={leadErrors.email}
               />
-              {leadErrors.email ? (
-                <div className="text-sm text-red-300">{leadErrors.email}</div>
-              ) : null}
 
-              <select
+              <SelectField
+                icon={Building2}
                 value={leadForm.campus}
                 onChange={(e) => {
                   setLeadForm((prev) => ({ ...prev, campus: e.target.value }));
                   setLeadErrors((prev) => ({ ...prev, campus: "" }));
                 }}
-                disabled={isExistingLead}
-                className={inputClass(!!leadErrors.campus, isExistingLead)}
+                disabled={isExistingLead && !isEditingLead}
+                error={leadErrors.campus}
               >
-                <option value="" className="text-black">
-                  בחר קמפוס
-                </option>
+                <option value="" className="text-black">בחר קמפוס</option>
                 {campusOptions.map((item) => (
                   <option key={item} value={item} className="text-black">
                     {item}
                   </option>
                 ))}
-              </select>
-              {leadErrors.campus ? (
-                <div className="text-sm text-red-300">{leadErrors.campus}</div>
-              ) : null}
+              </SelectField>
 
-              <select
+              <SelectField
+                icon={Map}
                 value={leadForm.area}
                 onChange={(e) => {
                   setLeadForm((prev) => ({ ...prev, area: e.target.value }));
                   setLeadErrors((prev) => ({ ...prev, area: "" }));
                 }}
-                disabled={isExistingLead}
-                className={inputClass(!!leadErrors.area, isExistingLead)}
+                disabled={isExistingLead && !isEditingLead}
+                error={leadErrors.area}
               >
-                <option value="" className="text-black">
-                  בחר אזור
-                </option>
+                <option value="" className="text-black">בחר אזור</option>
                 {areaOptions.map((item) => (
                   <option key={item} value={item} className="text-black">
                     {item}
                   </option>
                 ))}
-              </select>
-              {leadErrors.area ? (
-                <div className="text-sm text-red-300">{leadErrors.area}</div>
-              ) : null}
+              </SelectField>
 
-              <select
+              <SelectField
+                icon={Megaphone}
                 value={leadForm.source}
                 onChange={(e) => {
                   setLeadForm((prev) => ({ ...prev, source: e.target.value }));
                   setLeadErrors((prev) => ({ ...prev, source: "" }));
                 }}
-                disabled={isExistingLead}
-                className={inputClass(!!leadErrors.source, isExistingLead)}
+                disabled={isExistingLead && !isEditingLead}
+                error={leadErrors.source}
               >
-                <option value="" className="text-black">
-                  בחר מקור הגעה
-                </option>
+                <option value="" className="text-black">בחר מקור הגעה</option>
                 {sourceOptions.map((item) => (
                   <option key={item} value={item} className="text-black">
                     {item}
                   </option>
                 ))}
-              </select>
-              {leadErrors.source ? (
-                <div className="text-sm text-red-300">{leadErrors.source}</div>
-              ) : null}
+              </SelectField>
 
-              <select
+              <SelectField
+                icon={GraduationCap}
                 value={leadForm.departmentId}
                 onChange={(e) => {
                   setLeadForm((prev) => ({
@@ -642,28 +798,19 @@ export default function ConsultationPage() {
                   }));
                   setLeadErrors((prev) => ({ ...prev, departmentId: "" }));
                 }}
-                disabled={isExistingLead || optionsLoading}
-                className={inputClass(
-                  !!leadErrors.departmentId,
-                  isExistingLead || optionsLoading
-                )}
+                disabled={(isExistingLead && !isEditingLead) || optionsLoading}
+                error={leadErrors.departmentId}
               >
-                <option value="" className="text-black">
-                  בחר מחלקה
-                </option>
+                <option value="" className="text-black">בחר מחלקה</option>
                 {departments.map((item) => (
                   <option key={item.id} value={item.id} className="text-black">
                     {item.name}
                   </option>
                 ))}
-              </select>
-              {leadErrors.departmentId ? (
-                <div className="text-sm text-red-300">
-                  {leadErrors.departmentId}
-                </div>
-              ) : null}
+              </SelectField>
 
-              <select
+              <SelectField
+                icon={MapPinned}
                 value={leadForm.cityId}
                 onChange={(e) => {
                   setLeadForm((prev) => ({
@@ -672,64 +819,124 @@ export default function ConsultationPage() {
                   }));
                   setLeadErrors((prev) => ({ ...prev, cityId: "" }));
                 }}
-                disabled={isExistingLead || optionsLoading}
-                className={inputClass(
-                  !!leadErrors.cityId,
-                  isExistingLead || optionsLoading
-                )}
+                disabled={(isExistingLead && !isEditingLead) || optionsLoading}
+                error={leadErrors.cityId}
               >
-                <option value="" className="text-black">
-                  בחר עיר
-                </option>
+                <option value="" className="text-black">בחר עיר</option>
                 {cities.map((item) => (
                   <option key={item.id} value={item.id} className="text-black">
                     {item.town}
                   </option>
                 ))}
-              </select>
-              {leadErrors.cityId ? (
-                <div className="text-sm text-red-300">{leadErrors.cityId}</div>
-              ) : null}
+              </SelectField>
             </div>
 
             {!isExistingLead ? (
-              <div className="mt-6">
+              <div className="mt-5">
                 <button
                   type="button"
-                  onClick={handleCreateLead}
+                  onClick={handleSaveLead}
                   disabled={savingLead}
-                  className="w-full rounded-2xl bg-sky-500/20 px-4 py-4 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
                 >
+                  <Save size={18} />
                   {savingLead ? "שומר..." : "שמור מועמד חדש"}
                 </button>
               </div>
             ) : (
-              <div className="mt-6 rounded-2xl bg-white/5 p-5 ring-1 ring-white/10">
-                <div className="mb-3 text-lg font-bold text-white">
-                  מועמד קיים שנבחר
+              <div className="mt-5 space-y-4">
+                <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white/80">
+                    <BadgeInfo size={16} className="text-emerald-300" />
+                    <span>מועמד קיים שנבחר</span>
+                  </div>
+
+                  <div className="space-y-2 text-sm text-white/75">
+                    <div className="flex items-center gap-2">
+                      <UserRound size={15} className="text-white/50" />
+                      <span>שם: {selectedLeadSummary?.name}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Phone size={15} className="text-white/50" />
+                      <span>טלפון: {selectedLeadSummary?.phone}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Mail size={15} className="text-white/50" />
+                      <span>אימייל: {selectedLeadSummary?.email}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Building2 size={15} className="text-white/50" />
+                      <span>קמפוס: {selectedLeadSummary?.campus}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Map size={15} className="text-white/50" />
+                      <span>אזור: {selectedLeadSummary?.area}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <GraduationCap size={15} className="text-white/50" />
+                      <span>מחלקה: {selectedLeadSummary?.department}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <MapPinned size={15} className="text-white/50" />
+                      <span>עיר: {selectedLeadSummary?.city}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <Megaphone size={15} className="text-white/50" />
+                      <span>מקור: {selectedLeadSummary?.source}</span>
+                    </div>
+                    <div className="flex items-center gap-2">
+                      <BadgeInfo size={15} className="text-white/50" />
+                      <span>סטטוס: {selectedLeadSummary?.status}</span>
+                    </div>
+                  </div>
                 </div>
-                <div className="space-y-2 text-sm text-white/75">
-                  <div>שם: {selectedLeadSummary?.name}</div>
-                  <div>טלפון: {selectedLeadSummary?.phone}</div>
-                  <div>אימייל: {selectedLeadSummary?.email}</div>
-                  <div>קמפוס: {selectedLeadSummary?.campus}</div>
-                  <div>אזור: {selectedLeadSummary?.area}</div>
-                  <div>מחלקה: {selectedLeadSummary?.department}</div>
-                  <div>עיר: {selectedLeadSummary?.city}</div>
-                  <div>מקור: {selectedLeadSummary?.source}</div>
-                  <div>סטטוס: {selectedLeadSummary?.status}</div>
-                </div>
+
+                {!isEditingLead ? (
+                  <button
+                    type="button"
+                    onClick={handleStartEditLead}
+                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500/20 px-4 py-3 font-bold text-emerald-100 ring-1 ring-emerald-300/30 transition hover:bg-emerald-500/30"
+                  >
+                    <SquarePen size={18} />
+                    שינוי פרטי מועמד
+                  </button>
+                ) : (
+                  <div className="flex gap-3">
+                    <button
+                      type="button"
+                      onClick={handleSaveLead}
+                      disabled={savingLead}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                    >
+                      <Save size={18} />
+                      {savingLead ? "שומר..." : "שמור שינויים"}
+                    </button>
+
+                    <button
+                      type="button"
+                      onClick={handleCancelEditLead}
+                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
+                    >
+                      <X size={18} />
+                      בטל עריכה
+                    </button>
+                  </div>
+                )}
               </div>
             )}
-          </Card>
+          </div>
 
-          <Card
-            title="פגישת ייעוץ"
-            icon={HiOutlineCalendarDays}
-            className="2xl:col-span-4"
-          >
-            <div className="grid grid-cols-1 gap-3">
-              <input
+          <div className="rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)] xl:col-span-1">
+            <div className="flex items-center gap-3">
+              <div className="rounded-2xl bg-violet-500/15 p-3 text-violet-300">
+                <CalendarDays size={22} />
+              </div>
+              <div className="text-xl font-extrabold">פגישת ייעוץ</div>
+            </div>
+
+            <div className="mt-5 grid grid-cols-1 gap-3">
+              <InputField
+                icon={CalendarDays}
                 type="date"
                 value={consultationForm.meetingDate}
                 onChange={(e) => {
@@ -737,20 +944,13 @@ export default function ConsultationPage() {
                     ...prev,
                     meetingDate: e.target.value,
                   }));
-                  setConsultationErrors((prev) => ({
-                    ...prev,
-                    meetingDate: "",
-                  }));
+                  setConsultationErrors((prev) => ({ ...prev, meetingDate: "" }));
                 }}
-                className={inputClass(!!consultationErrors.meetingDate)}
+                error={consultationErrors.meetingDate}
               />
-              {consultationErrors.meetingDate ? (
-                <div className="text-sm text-red-300">
-                  {consultationErrors.meetingDate}
-                </div>
-              ) : null}
 
-              <input
+              <InputField
+                icon={Clock3}
                 type="time"
                 value={consultationForm.meetingTime}
                 onChange={(e) => {
@@ -758,20 +958,13 @@ export default function ConsultationPage() {
                     ...prev,
                     meetingTime: e.target.value,
                   }));
-                  setConsultationErrors((prev) => ({
-                    ...prev,
-                    meetingTime: "",
-                  }));
+                  setConsultationErrors((prev) => ({ ...prev, meetingTime: "" }));
                 }}
-                className={inputClass(!!consultationErrors.meetingTime)}
+                error={consultationErrors.meetingTime}
               />
-              {consultationErrors.meetingTime ? (
-                <div className="text-sm text-red-300">
-                  {consultationErrors.meetingTime}
-                </div>
-              ) : null}
 
-              <select
+              <SelectField
+                icon={ListChecks}
                 value={consultationForm.outcome}
                 onChange={(e) =>
                   setConsultationForm((prev) => ({
@@ -779,20 +972,16 @@ export default function ConsultationPage() {
                     outcome: e.target.value,
                   }))
                 }
-                className={inputClass(false)}
               >
                 {outcomeOptions.map((item) => (
-                  <option
-                    key={item.value}
-                    value={item.value}
-                    className="text-black"
-                  >
+                  <option key={item.value} value={item.value} className="text-black">
                     {item.label}
                   </option>
                 ))}
-              </select>
+              </SelectField>
 
-              <select
+              <SelectField
+                icon={CheckCircle2}
                 value={consultationForm.arrived}
                 onChange={(e) =>
                   setConsultationForm((prev) => ({
@@ -800,20 +989,14 @@ export default function ConsultationPage() {
                     arrived: e.target.value,
                   }))
                 }
-                className={inputClass(false)}
               >
-                <option value="" className="text-black">
-                  הגיע / לא הגיע
-                </option>
-                <option value="true" className="text-black">
-                  הגיע
-                </option>
-                <option value="false" className="text-black">
-                  לא הגיע
-                </option>
-              </select>
+                <option value="" className="text-black">הגיע / לא הגיע</option>
+                <option value="true" className="text-black">הגיע</option>
+                <option value="false" className="text-black">לא הגיע</option>
+              </SelectField>
 
-              <textarea
+              <TextareaField
+                icon={FileText}
                 placeholder="הערות"
                 value={consultationForm.notes}
                 onChange={(e) =>
@@ -822,24 +1005,22 @@ export default function ConsultationPage() {
                     notes: e.target.value,
                   }))
                 }
-                rows={5}
-                className={inputClass(false)}
+                rows={4}
               />
 
               {consultationErrors.lead ? (
-                <div className="text-sm text-red-300">
-                  {consultationErrors.lead}
-                </div>
+                <div className="text-sm text-red-300">{consultationErrors.lead}</div>
               ) : null}
             </div>
 
-            <div className="mt-6 flex gap-3">
+            <div className="mt-5 flex gap-3">
               <button
                 type="button"
                 onClick={handleSaveConsultation}
                 disabled={savingConsultation}
-                className="w-full rounded-2xl bg-sky-500/20 px-4 py-4 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
               >
+                <Save size={18} />
                 {savingConsultation
                   ? "שומר..."
                   : editingConsultationId
@@ -850,30 +1031,34 @@ export default function ConsultationPage() {
               <button
                 type="button"
                 onClick={handleClearConsultationForm}
-                className="w-full rounded-2xl bg-white/10 px-4 py-4 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
+                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
               >
+                <RotateCcw size={18} />
                 נקה טופס
               </button>
             </div>
-          </Card>
+          </div>
         </div>
 
-        <Card
-          title="רשימת פגישות קודמות"
-          icon={HiOutlineClipboardDocumentList}
-          className="mt-8"
-        >
+        <div className="mt-8 rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)]">
+          <div className="flex items-center gap-3">
+            <div className="rounded-2xl bg-amber-500/15 p-3 text-amber-300">
+              <ListChecks size={22} />
+            </div>
+            <div className="text-xl font-extrabold">רשימת פגישות קודמות</div>
+          </div>
+
           {!selectedLead ? (
-            <div className="rounded-2xl bg-white/5 p-5 text-white/65 ring-1 ring-white/10">
+            <div className="mt-4 rounded-2xl bg-white/5 p-4 text-white/65 ring-1 ring-white/10">
               בחר מועמד קיים או צור מועמד חדש כדי לראות ולהוסיף פגישות
             </div>
           ) : consultations.length === 0 ? (
-            <div className="rounded-2xl bg-white/5 p-5 text-white/65 ring-1 ring-white/10">
+            <div className="mt-4 rounded-2xl bg-white/5 p-4 text-white/65 ring-1 ring-white/10">
               אין עדיין פגישות שמורות למועמד זה
             </div>
           ) : (
-            <div className="overflow-x-auto">
-              <table className="w-full min-w-[950px] border-separate border-spacing-y-3">
+            <div className="mt-4 overflow-x-auto">
+              <table className="w-full min-w-[900px] border-separate border-spacing-y-3">
                 <thead>
                   <tr className="text-right text-sm text-white/60">
                     <th className="px-3">תאריך פגישה</th>
@@ -886,33 +1071,63 @@ export default function ConsultationPage() {
                 </thead>
                 <tbody>
                   {consultations.map((item) => (
-                    <tr
-                      key={item.id}
-                      className="rounded-2xl bg-white/5 ring-1 ring-white/10"
-                    >
+                    <tr key={item.id} className="rounded-2xl bg-white/5 ring-1 ring-white/10">
                       <td className="px-3 py-4">
-                        {formatDateTime(item.meetingDate)}
+                        <div className="inline-flex items-center gap-2">
+                          <CalendarDays size={15} className="text-sky-300" />
+                          <span>{formatDateTime(item.meetingDate)}</span>
+                        </div>
                       </td>
+
                       <td className="px-3 py-4">
-                        {getOutcomeLabel(item.outcome)}
+                        <div className="inline-flex items-center gap-2">
+                          <ListChecks size={15} className="text-violet-300" />
+                          <span>{getOutcomeLabel(item.outcome)}</span>
+                        </div>
                       </td>
+
                       <td className="px-3 py-4">
-                        {item.arrived === true
-                          ? "כן"
-                          : item.arrived === false
-                          ? "לא"
-                          : "-"}
+                        <div className="inline-flex items-center gap-2">
+                          {item.arrived === true ? (
+                            <>
+                              <CheckCircle2 size={16} className="text-emerald-300" />
+                              <span>כן</span>
+                            </>
+                          ) : item.arrived === false ? (
+                            <>
+                              <XCircle size={16} className="text-rose-300" />
+                              <span>לא</span>
+                            </>
+                          ) : (
+                            <>
+                              <BadgeInfo size={16} className="text-white/45" />
+                              <span>-</span>
+                            </>
+                          )}
+                        </div>
                       </td>
-                      <td className="px-3 py-4">{item.notes || "-"}</td>
+
                       <td className="px-3 py-4">
-                        {formatDateTime(item.createdAt)}
+                        <div className="inline-flex items-center gap-2">
+                          <FileText size={15} className="text-white/50" />
+                          <span>{item.notes || "-"}</span>
+                        </div>
                       </td>
+
+                      <td className="px-3 py-4">
+                        <div className="inline-flex items-center gap-2">
+                          <Clock3 size={15} className="text-white/50" />
+                          <span>{formatDateTime(item.createdAt)}</span>
+                        </div>
+                      </td>
+
                       <td className="px-3 py-4">
                         <button
                           type="button"
                           onClick={() => handleEditConsultation(item)}
-                          className="rounded-xl bg-sky-500/20 px-4 py-2 text-sm font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30"
+                          className="inline-flex items-center gap-2 rounded-xl bg-sky-500/20 px-4 py-2 text-sm font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30"
                         >
+                          <Pencil size={15} />
                           ערוך
                         </button>
                       </td>
@@ -922,7 +1137,7 @@ export default function ConsultationPage() {
               </table>
             </div>
           )}
-        </Card>
+        </div>
       </div>
     </div>
   );

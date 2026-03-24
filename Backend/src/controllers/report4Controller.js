@@ -13,18 +13,18 @@ const monthKeys = [
 ];
 
 const monthLabels = {
-  "01": "01/25",
-  "02": "02/25",
-  "03": "03/25",
-  "04": "04/25",
-  "05": "05/25",
-  "06": "06/25",
-  "07": "07/25",
-  "08": "08/25",
-  "09": "09/25",
-  "10": "10/25",
-  "11": "11/25",
-  "12": "12/25",
+  "01": "01",
+  "02": "02",
+  "03": "03",
+  "04": "04",
+  "05": "05",
+  "06": "06",
+  "07": "07",
+  "08": "08",
+  "09": "09",
+  "10": "10",
+  "11": "11",
+  "12": "12",
 };
 
 const outcomeLabelMap = {
@@ -50,13 +50,41 @@ function parseMonthsParam(monthsParam) {
   return parsed.length ? parsed : monthKeys;
 }
 
+function normalizeCampusValue(value) {
+  if (!value) return null;
+
+  const cleaned = String(value).trim();
+
+  if (cleaned === "ASHDOD" || cleaned === "אשדוד") {
+    return "ASHDOD";
+  }
+
+  if (
+    cleaned === "BEER_SHEVA" ||
+    cleaned === "באר שבע" ||
+    cleaned === "באר-שבע"
+  ) {
+    return "BEER_SHEVA";
+  }
+
+  return cleaned;
+}
+
 function buildCampusLeadWhere(campus) {
   if (campus === "ASHDOD") {
-    return { campus: "ASHDOD" };
+    return {
+      OR: [{ campus: "ASHDOD" }, { campus: "אשדוד" }],
+    };
   }
 
   if (campus === "BEER_SHEVA") {
-    return { campus: "BEER_SHEVA" };
+    return {
+      OR: [
+        { campus: "BEER_SHEVA" },
+        { campus: "באר שבע" },
+        { campus: "באר-שבע" },
+      ],
+    };
   }
 
   return {};
@@ -66,6 +94,11 @@ function buildCampusKeys(campus) {
   if (campus === "ASHDOD") return ["ASHDOD"];
   if (campus === "BEER_SHEVA") return ["BEER_SHEVA"];
   return ["ASHDOD", "BEER_SHEVA"];
+}
+
+function buildMonthLabel(monthKey, gregorianYear) {
+  const yearSuffix = String(gregorianYear).slice(-2);
+  return `${monthLabels[monthKey] || monthKey}/${yearSuffix}`;
 }
 
 async function getReport4Monthly(req, res) {
@@ -123,7 +156,7 @@ async function getReport4Monthly(req, res) {
 
     const rows = selectedMonths.map((mKey) => ({
       month: mKey,
-      label: monthLabels[mKey] || mKey,
+      label: buildMonthLabel(mKey, gregorianYear),
       invitedAshdod: 0,
       invitedBeer: 0,
       attendedAshdod: 0,
@@ -134,31 +167,30 @@ async function getReport4Monthly(req, res) {
     const campusKeys = buildCampusKeys(campus);
 
     for (const lead of leads) {
+      const normalizedCampus = normalizeCampusValue(lead.campus);
+      if (!normalizedCampus || !campusKeys.includes(normalizedCampus)) continue;
+
       const leadDate = new Date(lead.createdAt);
       const monthNumber = leadDate.getMonth() + 1;
-
       if (!selectedMonthNumbers.has(monthNumber)) continue;
-      if (!campusKeys.includes(lead.campus)) continue;
 
       const monthKey = String(monthNumber).padStart(2, "0");
       const row = rowMap.get(monthKey);
       if (!row) continue;
 
-      if (lead.campus === "ASHDOD") {
+      if (normalizedCampus === "ASHDOD") {
         row.invitedAshdod += 1;
-      } else if (lead.campus === "BEER_SHEVA") {
+      } else if (normalizedCampus === "BEER_SHEVA") {
         row.invitedBeer += 1;
       }
     }
 
     for (const consultation of consultations) {
-      const campusFromLead = consultation.lead?.campus;
-      if (!campusFromLead) continue;
-      if (!campusKeys.includes(campusFromLead)) continue;
+      const campusFromLead = normalizeCampusValue(consultation.lead?.campus);
+      if (!campusFromLead || !campusKeys.includes(campusFromLead)) continue;
 
       const consultationDate = new Date(consultation.meetingDate);
       const monthNumber = consultationDate.getMonth() + 1;
-
       if (!selectedMonthNumbers.has(monthNumber)) continue;
       if (consultation.arrived !== true) continue;
 
@@ -258,9 +290,8 @@ async function getReport4Outcomes(req, res) {
     }
 
     for (const consultation of consultations) {
-      const campusFromLead = consultation.lead?.campus;
-      if (!campusFromLead) continue;
-      if (!campusKeys.includes(campusFromLead)) continue;
+      const campusFromLead = normalizeCampusValue(consultation.lead?.campus);
+      if (!campusFromLead || !campusKeys.includes(campusFromLead)) continue;
 
       const consultationDate = new Date(consultation.meetingDate);
       const monthNumber = consultationDate.getMonth() + 1;

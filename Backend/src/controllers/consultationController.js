@@ -1,5 +1,61 @@
 const prisma = require("../config/db");
 
+function normalizeCampus(value) {
+  if (!value) return null;
+
+  const cleaned = String(value).trim();
+
+  if (cleaned === "אשדוד" || cleaned.toUpperCase() === "ASHDOD") {
+    return "ASHDOD";
+  }
+
+  if (
+    cleaned === "באר שבע" ||
+    cleaned === "באר-שבע" ||
+    cleaned.toUpperCase() === "BEER_SHEVA"
+  ) {
+    return "BEER_SHEVA";
+  }
+
+  return cleaned;
+}
+
+function normalizeSource(value) {
+  if (!value) return null;
+
+  const cleaned = String(value).trim();
+
+  if (cleaned === "פייסבוק") return "Facebook";
+  if (cleaned === "אינסטגרם") return "Instagram";
+  if (cleaned === "גוגל") return "Google Ads";
+  if (cleaned === "אתר") return "Website";
+  if (cleaned === "טלפון") return "Phone";
+  if (cleaned === "המלצה") return "Referral";
+  if (cleaned === "אחר") return "Other";
+
+  return cleaned;
+}
+
+function validateLeadPayload({
+  fullName,
+  phone,
+  campus,
+  area,
+  source,
+  departmentId,
+  cityId,
+}) {
+  return !!(
+    fullName &&
+    phone &&
+    campus &&
+    area &&
+    source &&
+    departmentId &&
+    cityId
+  );
+}
+
 function normalizeNullableString(value) {
   if (value === undefined || value === null) return null;
   const trimmed = String(value).trim();
@@ -168,13 +224,15 @@ async function createLead(req, res) {
     } = req.body || {};
 
     if (
-      !fullName ||
-      !phone ||
-      !campus ||
-      !area ||
-      !source ||
-      !departmentId ||
-      !cityId
+      !validateLeadPayload({
+        fullName,
+        phone,
+        campus,
+        area,
+        source,
+        departmentId,
+        cityId,
+      })
     ) {
       return res.status(400).json({
         message: "חובה למלא את כל שדות החובה של המועמד",
@@ -183,6 +241,8 @@ async function createLead(req, res) {
 
     const trimmedPhone = phone.trim();
     const normalizedEmail = normalizeNullableString(email)?.toLowerCase() || null;
+    const normalizedCampus = normalizeCampus(campus);
+    const normalizedSource = normalizeSource(source);
 
     const duplicateConditions = [{ phone: trimmedPhone }];
     if (normalizedEmail) {
@@ -222,9 +282,9 @@ async function createLead(req, res) {
         fullName: fullName.trim(),
         phone: trimmedPhone,
         email: normalizedEmail,
-        campus: campus.trim(),
+        campus: normalizedCampus,
         area: area.trim(),
-        source: source.trim(),
+        source: normalizedSource,
         status: "IN_PROGRESS",
         departmentId: Number(departmentId),
         cityId: Number(cityId),
@@ -233,13 +293,6 @@ async function createLead(req, res) {
         department: true,
         city: true,
       },
-    });
-
-    console.log("lead created successfully:", {
-      id: lead.id,
-      fullName: lead.fullName,
-      phone: lead.phone,
-      email: lead.email,
     });
 
     return res.status(201).json({
@@ -360,6 +413,136 @@ async function getLeadConsultations(req, res) {
   }
 }
 
+async function updateLead(req, res) {
+  try {
+    const { id } = req.params;
+    const {
+      fullName,
+      phone,
+      email,
+      campus,
+      area,
+      source,
+      departmentId,
+      cityId,
+    } = req.body || {};
+
+    if (
+      !validateLeadPayload({
+        fullName,
+        phone,
+        campus,
+        area,
+        source,
+        departmentId,
+        cityId,
+      })
+    ) {
+      return res.status(400).json({
+        message: "חובה למלא את כל שדות החובה של המועמד",
+      });
+    }
+
+    const existingLead = await prisma.lead.findUnique({
+      where: { id: Number(id) },
+      include: {
+        department: true,
+        city: true,
+      },
+    });
+
+    if (!existingLead) {
+      return res.status(404).json({
+        message: "המועמד לא נמצא",
+      });
+    }
+
+    const trimmedPhone = phone.trim();
+    const normalizedEmail = normalizeNullableString(email)?.toLowerCase() || null;
+    const normalizedCampus = normalizeCampus(campus);
+    const normalizedSource = normalizeSource(source);
+
+    const duplicateLead = await prisma.lead.findFirst({
+      where: {
+        id: { not: Number(id) },
+        OR: [
+          { phone: trimmedPhone },
+          ...(normalizedEmail ? [{ email: normalizedEmail }] : []),
+        ],
+      },
+    });
+
+    if (duplicateLead) {
+      return res.status(409).json({
+        message: "כבר קיים מועמד אחר עם אותו טלפון או אימייל",
+      });
+    }
+
+    const beforeUpdate = {
+      id: existingLead.id,
+      fullName: existingLead.fullName,
+      phone: existingLead.phone,
+      email: existingLead.email,
+      campus: existingLead.campus,
+      area: existingLead.area,
+      source: existingLead.source,
+      status: existingLead.status,
+      departmentId: existingLead.departmentId,
+      departmentName: existingLead.department?.name || null,
+      cityId: existingLead.cityId,
+      cityName: existingLead.city?.town || null,
+    };
+
+    const updatedLead = await prisma.lead.update({
+      where: { id: Number(id) },
+      data: {
+        fullName: fullName.trim(),
+        phone: trimmedPhone,
+        email: normalizedEmail,
+        campus: normalizedCampus,
+        area: area.trim(),
+        source: normalizedSource,
+        departmentId: Number(departmentId),
+        cityId: Number(cityId),
+      },
+      include: {
+        department: true,
+        city: true,
+      },
+    });
+
+    const afterUpdate = {
+      id: updatedLead.id,
+      fullName: updatedLead.fullName,
+      phone: updatedLead.phone,
+      email: updatedLead.email,
+      campus: updatedLead.campus,
+      area: updatedLead.area,
+      source: updatedLead.source,
+      status: updatedLead.status,
+      departmentId: updatedLead.departmentId,
+      departmentName: updatedLead.department?.name || null,
+      cityId: updatedLead.cityId,
+      cityName: updatedLead.city?.town || null,
+    };
+
+    console.log("lead updated successfully:");
+    console.log("before:", beforeUpdate);
+    console.log("after:", afterUpdate);
+
+    return res.json({
+      ok: true,
+      message: "פרטי המועמד עודכנו בהצלחה",
+      lead: updatedLead,
+    });
+  } catch (error) {
+    console.error("updateLead error:", error);
+    return res.status(500).json({
+      message: "שגיאת שרת בעדכון מועמד",
+    });
+  }
+}
+
 async function updateConsultation(req, res) {
   try {
     const { id } = req.params;
@@ -411,6 +594,7 @@ module.exports = {
   getConsultationFormOptions,
   searchLeads,
   createLead,
+  updateLead,
   createConsultation,
   getLeadConsultations,
   updateConsultation,
