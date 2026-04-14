@@ -34,7 +34,7 @@ ON CONFLICT (id_number) DO NOTHING;
 INSERT INTO passwords (id_number, password_hash)
 VALUES (
     '208029189',
-    '$2b$10$A.HwmzZO.JBop11AHt6tt.KRA7mAPG8Ilfe2KgquuT7oHhqQw36E2'
+    '2b$10$A.HwmzZO.JBop11AHt6tt.KRA7mAPG8Ilfe2KgquuT7oHhqQw36E2'
 )
 ON CONFLICT (id_number) DO NOTHING;
 
