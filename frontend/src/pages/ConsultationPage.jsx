@@ -85,17 +85,19 @@ function isValidEmail(email) {
 
 function inputClass(hasError, disabled = false, hasIcon = false) {
   return [
-    "w-full rounded-2xl bg-white/10 py-3 text-white placeholder:text-white/35 outline-none ring-1 transition",
-    hasIcon ? "pr-12 pl-4" : "px-4",
-    hasError ? "ring-red-400/70 focus:ring-red-300" : "ring-white/10",
+    "w-full rounded-xl bg-white/[0.06] py-2.5 text-sm text-white placeholder:text-white/35 outline-none ring-1 transition",
+    hasIcon ? "pr-11 pl-3.5" : "px-3.5",
+    hasError
+      ? "ring-red-400/70 focus:ring-red-300"
+      : "ring-white/10 focus:ring-sky-300/25",
     disabled ? "disabled:opacity-70" : "",
   ].join(" ");
 }
 
 function FieldIcon({ icon: Icon }) {
   return (
-    <div className="pointer-events-none absolute right-4 top-1/2 -translate-y-1/2 text-white/45">
-      <Icon size={18} />
+    <div className="pointer-events-none absolute right-3.5 top-1/2 -translate-y-1/2 text-white/40">
+      <Icon size={17} />
     </div>
   );
 }
@@ -147,20 +149,15 @@ function SelectField({
   );
 }
 
-function TextareaField({
-  icon,
-  error,
-  className = "",
-  ...props
-}) {
+function TextareaField({ icon, error, className = "", ...props }) {
   return (
     <div>
       <div className="relative">
         <textarea
           {...props}
-          className={`${inputClass(!!error, false, true)} min-h-[120px] resize-none ${className}`}
+          className={`${inputClass(!!error, false, true)} min-h-[104px] resize-none ${className}`}
         />
-        <div className="pointer-events-none absolute right-4 top-4 text-white/45">
+        <div className="pointer-events-none absolute right-3.5 top-3.5 text-white/40">
           {React.createElement(icon, { size: 18 })}
         </div>
       </div>
@@ -543,29 +540,31 @@ export default function ConsultationPage() {
       <TopNavbar />
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
-      <div className="mx-auto max-w-7xl px-6 pb-12 pt-28">
-        <div className="mt-8 text-center">
-          <div className="inline-flex items-center gap-2 rounded-full bg-white/5 px-4 py-2 ring-1 ring-white/10">
-            <CalendarDays size={18} className="text-sky-300" />
-            <span className="text-sm font-semibold text-white/85">ניהול פגישות ייעוץ</span>
+      <div className="mx-auto max-w-7xl px-6 pb-12 pt-24">
+        <div className="mt-6 text-center">
+          <div className="inline-flex items-center gap-2 rounded-full bg-white/[0.04] px-3.5 py-1.5 ring-1 ring-white/10">
+            <CalendarDays size={16} className="text-sky-300" />
+            <span className="text-xs font-semibold text-white/80">
+              ניהול פגישות ייעוץ
+            </span>
           </div>
 
-          <h1 className="mt-4 text-3xl font-extrabold tracking-tight">פגישת ייעוץ</h1>
-          <p className="mt-2 text-sm text-white/75">
-            חיפוש מועמד, יצירת מועמד חדש, יצירת פגישה חדשה ועריכת פגישות קיימות
+          <h1 className="mt-3 text-[28px] font-bold tracking-tight">פגישת ייעוץ</h1>
+          <p className="mt-2 text-sm text-white/65">
+            חיפוש מועמד, יצירת מועמד חדש, תיעוד פגישה ועדכון פגישות קיימות
           </p>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-8 xl:grid-cols-3">
-          <div className="rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)] xl:col-span-1">
+        <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-[0.95fr_1.1fr_0.95fr]">
+          <div className="rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-sky-500/15 p-3 text-sky-300">
-                <Search size={22} />
+              <div className="rounded-xl bg-sky-500/12 p-2.5 text-sky-300">
+                <Search size={18} />
               </div>
-              <div className="text-xl font-extrabold">חיפוש מועמד קיים</div>
+              <div className="text-lg font-bold">חיפוש מועמד קיים</div>
             </div>
 
-            <div className="mt-5 space-y-4">
+            <div className="mt-5 space-y-3.5">
               <InputField
                 icon={Search}
                 type="text"
@@ -614,26 +613,26 @@ export default function ConsultationPage() {
                   type="button"
                   onClick={handleSearch}
                   disabled={searching}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-500/18 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/25 transition hover:bg-sky-500/28 disabled:opacity-60"
                 >
-                  <Search size={18} />
+                  <Search size={17} />
                   {searching ? "מחפש..." : "חפש מועמד"}
                 </button>
 
                 <button
                   type="button"
                   onClick={handleClearSearchAndLeadSection}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 text-sm font-semibold text-white ring-1 ring-white/10 transition hover:bg-white/[0.08]"
                 >
-                  <RotateCcw size={18} />
+                  <RotateCcw size={17} />
                   נקה טופס
                 </button>
               </div>
             </div>
 
             <div className="mt-6">
-              <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white/80">
-                <Users size={16} className="text-white/60" />
+              <div className="mb-3 flex items-center gap-2 text-xs font-semibold tracking-wide text-white/65">
+                <Users size={15} className="text-white/50" />
                 <span>תוצאות חיפוש</span>
               </div>
 
@@ -643,32 +642,32 @@ export default function ConsultationPage() {
                     key={lead.id}
                     type="button"
                     onClick={() => handleSelectLead(lead)}
-                    className="w-full rounded-2xl bg-white/5 p-4 text-right ring-1 ring-white/10 transition hover:bg-white/10"
+                    className="w-full rounded-xl bg-white/[0.04] p-3.5 text-right ring-1 ring-white/10 transition hover:bg-white/[0.07]"
                   >
                     <div className="flex items-start gap-3">
-                      <div className="mt-1 rounded-xl bg-white/10 p-2 text-sky-300">
-                        <UserRound size={16} />
+                      <div className="mt-1 rounded-lg bg-white/10 p-2 text-sky-300">
+                        <UserRound size={15} />
                       </div>
 
                       <div className="flex-1">
-                        <div className="font-bold">{lead.fullName}</div>
+                        <div className="text-sm font-semibold">{lead.fullName}</div>
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-white/70">
                           <span className="inline-flex items-center gap-1">
-                            <Phone size={14} />
+                            <Phone size={13} />
                             {lead.phone || "-"}
                           </span>
                           <span className="inline-flex items-center gap-1">
-                            <Mail size={14} />
+                            <Mail size={13} />
                             {lead.email || "-"}
                           </span>
                         </div>
                         <div className="mt-2 flex flex-wrap gap-x-3 gap-y-1 text-xs text-white/55">
                           <span className="inline-flex items-center gap-1">
-                            <GraduationCap size={13} />
+                            <GraduationCap size={12} />
                             {lead.department?.name || "-"}
                           </span>
                           <span className="inline-flex items-center gap-1">
-                            <MapPinned size={13} />
+                            <MapPinned size={12} />
                             {lead.city?.town || "-"}
                           </span>
                         </div>
@@ -678,7 +677,7 @@ export default function ConsultationPage() {
                 ))}
 
                 {!searching && searchResults.length === 0 ? (
-                  <div className="rounded-2xl bg-white/5 p-4 text-sm text-white/60 ring-1 ring-white/10">
+                  <div className="rounded-xl bg-white/[0.04] p-4 text-sm text-white/60 ring-1 ring-white/10">
                     אין תוצאות להצגה
                   </div>
                 ) : null}
@@ -686,12 +685,12 @@ export default function ConsultationPage() {
             </div>
           </div>
 
-          <div className="rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)] xl:col-span-1">
+          <div className="rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-emerald-500/15 p-3 text-emerald-300">
-                <UserRound size={22} />
+              <div className="rounded-xl bg-emerald-500/12 p-2.5 text-emerald-300">
+                <UserRound size={18} />
               </div>
-              <div className="text-xl font-extrabold">פרטי מועמד</div>
+              <div className="text-lg font-bold">פרטי מועמד</div>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-3">
@@ -837,55 +836,55 @@ export default function ConsultationPage() {
                   type="button"
                   onClick={handleSaveLead}
                   disabled={savingLead}
-                  className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                  className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-500/18 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/25 transition hover:bg-sky-500/28 disabled:opacity-60"
                 >
-                  <Save size={18} />
+                  <Save size={17} />
                   {savingLead ? "שומר..." : "שמור מועמד חדש"}
                 </button>
               </div>
             ) : (
               <div className="mt-5 space-y-4">
-                <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/10">
-                  <div className="mb-3 flex items-center gap-2 text-sm font-bold text-white/80">
-                    <BadgeInfo size={16} className="text-emerald-300" />
+                <div className="rounded-xl bg-white/[0.04] p-4 ring-1 ring-white/10">
+                  <div className="mb-3 flex items-center gap-2 text-sm font-semibold text-white/80">
+                    <BadgeInfo size={15} className="text-emerald-300" />
                     <span>מועמד קיים שנבחר</span>
                   </div>
 
                   <div className="space-y-2 text-sm text-white/75">
                     <div className="flex items-center gap-2">
-                      <UserRound size={15} className="text-white/50" />
+                      <UserRound size={14} className="text-white/50" />
                       <span>שם: {selectedLeadSummary?.name}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Phone size={15} className="text-white/50" />
+                      <Phone size={14} className="text-white/50" />
                       <span>טלפון: {selectedLeadSummary?.phone}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Mail size={15} className="text-white/50" />
+                      <Mail size={14} className="text-white/50" />
                       <span>אימייל: {selectedLeadSummary?.email}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Building2 size={15} className="text-white/50" />
+                      <Building2 size={14} className="text-white/50" />
                       <span>קמפוס: {selectedLeadSummary?.campus}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Map size={15} className="text-white/50" />
+                      <Map size={14} className="text-white/50" />
                       <span>אזור: {selectedLeadSummary?.area}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <GraduationCap size={15} className="text-white/50" />
+                      <GraduationCap size={14} className="text-white/50" />
                       <span>מחלקה: {selectedLeadSummary?.department}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <MapPinned size={15} className="text-white/50" />
+                      <MapPinned size={14} className="text-white/50" />
                       <span>עיר: {selectedLeadSummary?.city}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <Megaphone size={15} className="text-white/50" />
+                      <Megaphone size={14} className="text-white/50" />
                       <span>מקור: {selectedLeadSummary?.source}</span>
                     </div>
                     <div className="flex items-center gap-2">
-                      <BadgeInfo size={15} className="text-white/50" />
+                      <BadgeInfo size={14} className="text-white/50" />
                       <span>סטטוס: {selectedLeadSummary?.status}</span>
                     </div>
                   </div>
@@ -895,9 +894,9 @@ export default function ConsultationPage() {
                   <button
                     type="button"
                     onClick={handleStartEditLead}
-                    className="flex w-full items-center justify-center gap-2 rounded-2xl bg-emerald-500/20 px-4 py-3 font-bold text-emerald-100 ring-1 ring-emerald-300/30 transition hover:bg-emerald-500/30"
+                    className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-emerald-500/18 px-4 text-sm font-semibold text-emerald-100 ring-1 ring-emerald-300/25 transition hover:bg-emerald-500/28"
                   >
-                    <SquarePen size={18} />
+                    <SquarePen size={17} />
                     שינוי פרטי מועמד
                   </button>
                 ) : (
@@ -906,18 +905,18 @@ export default function ConsultationPage() {
                       type="button"
                       onClick={handleSaveLead}
                       disabled={savingLead}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-500/18 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/25 transition hover:bg-sky-500/28 disabled:opacity-60"
                     >
-                      <Save size={18} />
+                      <Save size={17} />
                       {savingLead ? "שומר..." : "שמור שינויים"}
                     </button>
 
                     <button
                       type="button"
                       onClick={handleCancelEditLead}
-                      className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
+                      className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 text-sm font-semibold text-white ring-1 ring-white/10 transition hover:bg-white/[0.08]"
                     >
-                      <X size={18} />
+                      <X size={17} />
                       בטל עריכה
                     </button>
                   </div>
@@ -926,12 +925,12 @@ export default function ConsultationPage() {
             )}
           </div>
 
-          <div className="rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)] xl:col-span-1">
+          <div className="rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
             <div className="flex items-center gap-3">
-              <div className="rounded-2xl bg-violet-500/15 p-3 text-violet-300">
-                <CalendarDays size={22} />
+              <div className="rounded-xl bg-violet-500/12 p-2.5 text-violet-300">
+                <CalendarDays size={18} />
               </div>
-              <div className="text-xl font-extrabold">פגישת ייעוץ</div>
+              <div className="text-lg font-bold">פגישת ייעוץ</div>
             </div>
 
             <div className="mt-5 grid grid-cols-1 gap-3">
@@ -1018,9 +1017,9 @@ export default function ConsultationPage() {
                 type="button"
                 onClick={handleSaveConsultation}
                 disabled={savingConsultation}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-sky-500/20 px-4 py-3 font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30 disabled:opacity-60"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-sky-500/18 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/25 transition hover:bg-sky-500/28 disabled:opacity-60"
               >
-                <Save size={18} />
+                <Save size={17} />
                 {savingConsultation
                   ? "שומר..."
                   : editingConsultationId
@@ -1031,34 +1030,34 @@ export default function ConsultationPage() {
               <button
                 type="button"
                 onClick={handleClearConsultationForm}
-                className="flex w-full items-center justify-center gap-2 rounded-2xl bg-white/10 px-4 py-3 font-bold text-white ring-1 ring-white/10 transition hover:bg-white/15"
+                className="flex h-11 w-full items-center justify-center gap-2 rounded-xl bg-white/[0.05] px-4 text-sm font-semibold text-white ring-1 ring-white/10 transition hover:bg-white/[0.08]"
               >
-                <RotateCcw size={18} />
+                <RotateCcw size={17} />
                 נקה טופס
               </button>
             </div>
           </div>
         </div>
 
-        <div className="mt-8 rounded-[32px] bg-[#3b3e47] p-6 shadow-[0_18px_60px_rgba(0,0,0,0.40)]">
+        <div className="mt-8 rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
           <div className="flex items-center gap-3">
-            <div className="rounded-2xl bg-amber-500/15 p-3 text-amber-300">
-              <ListChecks size={22} />
+            <div className="rounded-xl bg-amber-500/12 p-2.5 text-amber-300">
+              <ListChecks size={18} />
             </div>
-            <div className="text-xl font-extrabold">רשימת פגישות קודמות</div>
+            <div className="text-lg font-bold">רשימת פגישות קודמות</div>
           </div>
 
           {!selectedLead ? (
-            <div className="mt-4 rounded-2xl bg-white/5 p-4 text-white/65 ring-1 ring-white/10">
+            <div className="mt-4 rounded-xl bg-white/[0.04] p-4 text-sm text-white/65 ring-1 ring-white/10">
               בחר מועמד קיים או צור מועמד חדש כדי לראות ולהוסיף פגישות
             </div>
           ) : consultations.length === 0 ? (
-            <div className="mt-4 rounded-2xl bg-white/5 p-4 text-white/65 ring-1 ring-white/10">
+            <div className="mt-4 rounded-xl bg-white/[0.04] p-4 text-sm text-white/65 ring-1 ring-white/10">
               אין עדיין פגישות שמורות למועמד זה
             </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[900px] border-separate border-spacing-y-3">
+              <table className="w-full min-w-[900px] border-separate border-spacing-y-2.5">
                 <thead>
                   <tr className="text-right text-sm text-white/60">
                     <th className="px-3">תאריך פגישה</th>
@@ -1071,63 +1070,66 @@ export default function ConsultationPage() {
                 </thead>
                 <tbody>
                   {consultations.map((item) => (
-                    <tr key={item.id} className="rounded-2xl bg-white/5 ring-1 ring-white/10">
-                      <td className="px-3 py-4">
+                    <tr
+                      key={item.id}
+                      className="rounded-xl bg-white/[0.04] ring-1 ring-white/10"
+                    >
+                      <td className="px-3 py-3.5">
                         <div className="inline-flex items-center gap-2">
-                          <CalendarDays size={15} className="text-sky-300" />
+                          <CalendarDays size={14} className="text-sky-300" />
                           <span>{formatDateTime(item.meetingDate)}</span>
                         </div>
                       </td>
 
-                      <td className="px-3 py-4">
+                      <td className="px-3 py-3.5">
                         <div className="inline-flex items-center gap-2">
-                          <ListChecks size={15} className="text-violet-300" />
+                          <ListChecks size={14} className="text-violet-300" />
                           <span>{getOutcomeLabel(item.outcome)}</span>
                         </div>
                       </td>
 
-                      <td className="px-3 py-4">
+                      <td className="px-3 py-3.5">
                         <div className="inline-flex items-center gap-2">
                           {item.arrived === true ? (
                             <>
-                              <CheckCircle2 size={16} className="text-emerald-300" />
+                              <CheckCircle2 size={15} className="text-emerald-300" />
                               <span>כן</span>
                             </>
                           ) : item.arrived === false ? (
                             <>
-                              <XCircle size={16} className="text-rose-300" />
+                              <XCircle size={15} className="text-rose-300" />
                               <span>לא</span>
                             </>
                           ) : (
                             <>
-                              <BadgeInfo size={16} className="text-white/45" />
+                              <BadgeInfo size={15} className="text-white/45" />
                               <span>-</span>
                             </>
                           )}
                         </div>
                       </td>
 
-                      <td className="px-3 py-4">
+                      <td className="px-3 py-3.5">
                         <div className="inline-flex items-center gap-2">
-                          <FileText size={15} className="text-white/50" />
+                          <FileText size={14} className="text-white/50" />
                           <span>{item.notes || "-"}</span>
                         </div>
                       </td>
 
-                      <td className="px-3 py-4">
+                      <td className="px-3 py-3.5">
                         <div className="inline-flex items-center gap-2">
-                          <Clock3 size={15} className="text-white/50" />
+                          <Clock3 size={14} className="text-white/50" />
                           <span>{formatDateTime(item.createdAt)}</span>
                         </div>
                       </td>
 
-                      <td className="px-3 py-4">
+                      <td className="px-3 py-3.5">
                         <button
                           type="button"
                           onClick={() => handleEditConsultation(item)}
-                          className="inline-flex items-center gap-2 rounded-xl bg-sky-500/20 px-4 py-2 text-sm font-bold text-sky-100 ring-1 ring-sky-300/30 transition hover:bg-sky-500/30"
+                          className="inline-flex h-9 items-center gap-2 rounded-xl bg-sky-500/18 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/25 transition hover:bg-sky-500/28"
                         >
-                          <Pencil size={15} />
+                          <Pencil size={14} />
                           ערוך
                         </button>
                       </td>

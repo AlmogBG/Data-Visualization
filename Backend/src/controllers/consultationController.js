@@ -1,4 +1,7 @@
 const prisma = require("../config/db");
+const {
+  notifyConsultationCreated,
+} = require("../services/consultationNotificationService");
 
 function normalizeCampus(value) {
   if (!value) return null;
@@ -103,12 +106,7 @@ async function getConsultationFormOptions(req, res) {
 
 async function searchLeads(req, res) {
   try {
-    const {
-      q = "",
-      phone = "",
-      email = "",
-      fullName = "",
-    } = req.query;
+    const { q = "", phone = "", email = "", fullName = "" } = req.query;
 
     const orConditions = [];
 
@@ -310,13 +308,7 @@ async function createLead(req, res) {
 
 async function createConsultation(req, res) {
   try {
-    const {
-      leadId,
-      meetingDate,
-      outcome,
-      arrived,
-      notes,
-    } = req.body || {};
+    const { leadId, meetingDate, outcome, arrived, notes } = req.body || {};
 
     if (!leadId || !meetingDate) {
       return res.status(400).json({
@@ -326,6 +318,10 @@ async function createConsultation(req, res) {
 
     const lead = await prisma.lead.findUnique({
       where: { id: Number(leadId) },
+      include: {
+        department: true,
+        city: true,
+      },
     });
 
     if (!lead) {
@@ -344,6 +340,11 @@ async function createConsultation(req, res) {
       },
     });
 
+    const notificationResult = await notifyConsultationCreated({
+      consultation,
+      lead,
+    });
+
     console.log("consultation created successfully:", {
       id: consultation.id,
       leadId: consultation.leadId,
@@ -351,12 +352,14 @@ async function createConsultation(req, res) {
       outcome: consultation.outcome,
       arrived: consultation.arrived,
       notes: consultation.notes,
+      notificationResult,
     });
 
     return res.status(201).json({
       ok: true,
       message: "פגישת הייעוץ נוצרה בהצלחה",
       consultation,
+      notificationResult,
     });
   } catch (error) {
     console.error("createConsultation error:", error);
