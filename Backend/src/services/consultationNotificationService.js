@@ -1,16 +1,10 @@
 const prisma = require("../config/db");
 
-async function notifyConsultationCreated({ consultation, lead }) {
-  const webhookUrl = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL;
-
-  if (!webhookUrl) {
-    return {
-      ok: false,
-      error: "Missing GOOGLE_APPS_SCRIPT_WEBHOOK_URL",
-    };
-  }
-
-  const payload = {
+function buildConsultationPayload({ consultation, lead }) {
+  return {
+    action: "upsert",
+    consultationId: consultation.id,
+    eventId: consultation.googleEventId || "",
     title: `פגישת ייעוץ - ${lead?.fullName || "מועמד"}`,
     candidateName: lead?.fullName || "",
     phone: lead?.phone || "",
@@ -23,6 +17,17 @@ async function notifyConsultationCreated({ consultation, lead }) {
     meetingDateTime: consultation.meetingDate,
     durationMinutes: 60,
   };
+}
+
+async function callAppsScript(payload) {
+  const webhookUrl = process.env.GOOGLE_APPS_SCRIPT_WEBHOOK_URL;
+
+  if (!webhookUrl) {
+    return {
+      ok: false,
+      error: "Missing GOOGLE_APPS_SCRIPT_WEBHOOK_URL",
+    };
+  }
 
   try {
     const response = await fetch(webhookUrl, {
@@ -34,6 +39,7 @@ async function notifyConsultationCreated({ consultation, lead }) {
     });
 
     const text = await response.text();
+
     console.log("Apps Script raw response:");
     console.log(text);
 
@@ -56,6 +62,53 @@ async function notifyConsultationCreated({ consultation, lead }) {
   }
 }
 
+async function upsertConsultationEvent({ consultation, lead }) {
+  const payload = buildConsultationPayload({ consultation, lead });
+  return callAppsScript(payload);
+}
+
+async function syncLeadConsultationsToCalendar({ lead, consultations }) {
+  const results = [];
+
+  for (const consultation of consultations) {
+    if (!consultation.meetingDate) {
+      results.push({
+        consultationId: consultation.id,
+        ok: false,
+        error: "Missing meetingDate",
+      });
+      continue;
+    }
+
+    const syncResult = await upsertConsultationEvent({
+      consultation,
+      lead,
+    });
+
+    if (syncResult.ok && syncResult.eventId) {
+      if (consultation.googleEventId !== syncResult.eventId) {
+        await prisma.consultation.update({
+          where: { id: consultation.id },
+          data: {
+            googleEventId: syncResult.eventId,
+          },
+        });
+      }
+    }
+
+    results.push({
+      consultationId: consultation.id,
+      ...syncResult,
+    });
+  }
+
+  return {
+    ok: results.every((item) => item.ok),
+    results,
+  };
+}
+
 module.exports = {
-  notifyConsultationCreated,
+  upsertConsultationEvent,
+  syncLeadConsultationsToCalendar,
 };

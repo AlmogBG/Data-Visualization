@@ -1,4 +1,4 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, { useEffect, useMemo, useRef, useState } from "react";
 import TopNavbar from "../components/TopNavbar";
 import Sidebar from "../components/Sidebar";
 import {
@@ -57,6 +57,9 @@ const outcomeLabelMap = {
   SELF_CONTACT: "פנייה עצמית",
   OTHER: "אחר",
 };
+
+const GOOGLE_CALENDAR_EMBED_BASE_URL =
+  "https://calendar.google.com/calendar/embed?src=datavisualization4222%40gmail.com&ctz=Asia%2FJerusalem&mode=MONTH&showTitle=0&showPrint=0&showCalendars=0&showTabs=1&showTz=0&hl=en";
 
 function buildDateTimeValue(datePart, timePart) {
   if (!datePart || !timePart) return "";
@@ -138,7 +141,11 @@ function SelectField({
         <select
           {...props}
           disabled={disabled}
-          className={`${inputClass(!!error, disabled, true)} appearance-none ${className}`}
+          className={`${inputClass(
+            !!error,
+            disabled,
+            true
+          )} appearance-none ${className}`}
         >
           {children}
         </select>
@@ -155,7 +162,11 @@ function TextareaField({ icon, error, className = "", ...props }) {
       <div className="relative">
         <textarea
           {...props}
-          className={`${inputClass(!!error, false, true)} min-h-[104px] resize-none ${className}`}
+          className={`${inputClass(
+            !!error,
+            false,
+            true
+          )} min-h-[104px] resize-none ${className}`}
         />
         <div className="pointer-events-none absolute right-3.5 top-3.5 text-white/40">
           {React.createElement(icon, { size: 18 })}
@@ -207,7 +218,9 @@ export default function ConsultationPage() {
   const [editingConsultationId, setEditingConsultationId] = useState(null);
 
   const [leadForm, setLeadForm] = useState(emptyLeadForm);
-  const [consultationForm, setConsultationForm] = useState(emptyConsultationForm);
+  const [consultationForm, setConsultationForm] = useState(
+    emptyConsultationForm
+  );
 
   const [leadErrors, setLeadErrors] = useState({});
   const [consultationErrors, setConsultationErrors] = useState({});
@@ -215,6 +228,13 @@ export default function ConsultationPage() {
   const [savingLead, setSavingLead] = useState(false);
   const [savingConsultation, setSavingConsultation] = useState(false);
   const [isEditingLead, setIsEditingLead] = useState(false);
+
+  const consultationCardRef = useRef(null);
+  const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
+
+  const calendarEmbedUrl = useMemo(() => {
+    return `${GOOGLE_CALENDAR_EMBED_BASE_URL}&refresh=${calendarRefreshKey}`;
+  }, [calendarRefreshKey]);
 
   useEffect(() => {
     async function loadOptions() {
@@ -248,7 +268,9 @@ export default function ConsultationPage() {
       campus: data.lead?.campus || "",
       area: data.lead?.area || "",
       source: data.lead?.source || "",
-      departmentId: data.lead?.department?.id ? String(data.lead.department.id) : "",
+      departmentId: data.lead?.department?.id
+        ? String(data.lead.department.id)
+        : "",
       cityId: data.lead?.city?.id ? String(data.lead.city.id) : "",
     });
   }
@@ -265,7 +287,7 @@ export default function ConsultationPage() {
     }
   }
 
-  function handleSelectLead(lead) {
+  async function handleSelectLead(lead) {
     setSelectedLead({
       id: lead.id,
       fullName: lead.fullName,
@@ -292,7 +314,9 @@ export default function ConsultationPage() {
 
     setIsEditingLead(false);
     setLeadErrors({});
-    setConsultations(lead.consultations || []);
+
+    await refreshLeadConsultations(lead.id);
+    setCalendarRefreshKey((prev) => prev + 1);
   }
 
   function handleClearSearchAndLeadSection() {
@@ -306,6 +330,7 @@ export default function ConsultationPage() {
     setLeadErrors({});
     setConsultationForm(emptyConsultationForm);
     setConsultationErrors({});
+    setCalendarRefreshKey((prev) => prev + 1);
   }
 
   function handleClearConsultationForm() {
@@ -380,7 +405,9 @@ export default function ConsultationPage() {
       campus: selectedLead.campus || "",
       area: selectedLead.area || "",
       source: selectedLead.source || "",
-      departmentId: selectedLead.department?.id ? String(selectedLead.department.id) : "",
+      departmentId: selectedLead.department?.id
+        ? String(selectedLead.department.id)
+        : "",
       cityId: selectedLead.city?.id ? String(selectedLead.city.id) : "",
     });
 
@@ -417,7 +444,9 @@ export default function ConsultationPage() {
           campus: data.lead.campus || "",
           area: data.lead.area || "",
           source: data.lead.source || "",
-          departmentId: data.lead.department?.id ? String(data.lead.department.id) : "",
+          departmentId: data.lead.department?.id
+            ? String(data.lead.department.id)
+            : "",
           cityId: data.lead.city?.id ? String(data.lead.city.id) : "",
         });
 
@@ -477,7 +506,8 @@ export default function ConsultationPage() {
           consultationForm.meetingTime
         ),
         outcome: consultationForm.outcome,
-        arrived: consultationForm.arrived === "" ? null : consultationForm.arrived,
+        arrived:
+          consultationForm.arrived === "" ? null : consultationForm.arrived,
         notes: consultationForm.notes,
       };
 
@@ -491,6 +521,7 @@ export default function ConsultationPage() {
 
       handleClearConsultationForm();
       await refreshLeadConsultations(leadId);
+      setCalendarRefreshKey((prev) => prev + 1);
     } catch (error) {
       alert(error.message);
     } finally {
@@ -516,6 +547,13 @@ export default function ConsultationPage() {
       arrived:
         item.arrived === true ? "true" : item.arrived === false ? "false" : "",
       notes: item.notes || "",
+    });
+
+    requestAnimationFrame(() => {
+      consultationCardRef.current?.scrollIntoView({
+        behavior: "smooth",
+        block: "start",
+      });
     });
   }
 
@@ -549,7 +587,9 @@ export default function ConsultationPage() {
             </span>
           </div>
 
-          <h1 className="mt-3 text-[28px] font-bold tracking-tight">פגישת ייעוץ</h1>
+          <h1 className="mt-3 text-[28px] font-bold tracking-tight">
+            פגישת ייעוץ
+          </h1>
           <p className="mt-2 text-sm text-white/65">
             חיפוש מועמד, יצירת מועמד חדש, תיעוד פגישה ועדכון פגישות קיימות
           </p>
@@ -650,7 +690,9 @@ export default function ConsultationPage() {
                       </div>
 
                       <div className="flex-1">
-                        <div className="text-sm font-semibold">{lead.fullName}</div>
+                        <div className="text-sm font-semibold">
+                          {lead.fullName}
+                        </div>
                         <div className="mt-1 flex flex-wrap gap-x-3 gap-y-1 text-sm text-white/70">
                           <span className="inline-flex items-center gap-1">
                             <Phone size={13} />
@@ -700,7 +742,10 @@ export default function ConsultationPage() {
                 placeholder="שם מלא"
                 value={leadForm.fullName}
                 onChange={(e) => {
-                  setLeadForm((prev) => ({ ...prev, fullName: e.target.value }));
+                  setLeadForm((prev) => ({
+                    ...prev,
+                    fullName: e.target.value,
+                  }));
                   setLeadErrors((prev) => ({ ...prev, fullName: "" }));
                 }}
                 disabled={isExistingLead && !isEditingLead}
@@ -743,7 +788,9 @@ export default function ConsultationPage() {
                 disabled={isExistingLead && !isEditingLead}
                 error={leadErrors.campus}
               >
-                <option value="" className="text-black">בחר קמפוס</option>
+                <option value="" className="text-black">
+                  בחר קמפוס
+                </option>
                 {campusOptions.map((item) => (
                   <option key={item} value={item} className="text-black">
                     {item}
@@ -761,7 +808,9 @@ export default function ConsultationPage() {
                 disabled={isExistingLead && !isEditingLead}
                 error={leadErrors.area}
               >
-                <option value="" className="text-black">בחר אזור</option>
+                <option value="" className="text-black">
+                  בחר אזור
+                </option>
                 {areaOptions.map((item) => (
                   <option key={item} value={item} className="text-black">
                     {item}
@@ -779,7 +828,9 @@ export default function ConsultationPage() {
                 disabled={isExistingLead && !isEditingLead}
                 error={leadErrors.source}
               >
-                <option value="" className="text-black">בחר מקור הגעה</option>
+                <option value="" className="text-black">
+                  בחר מקור הגעה
+                </option>
                 {sourceOptions.map((item) => (
                   <option key={item} value={item} className="text-black">
                     {item}
@@ -800,7 +851,9 @@ export default function ConsultationPage() {
                 disabled={(isExistingLead && !isEditingLead) || optionsLoading}
                 error={leadErrors.departmentId}
               >
-                <option value="" className="text-black">בחר מחלקה</option>
+                <option value="" className="text-black">
+                  בחר מחלקה
+                </option>
                 {departments.map((item) => (
                   <option key={item.id} value={item.id} className="text-black">
                     {item.name}
@@ -821,7 +874,9 @@ export default function ConsultationPage() {
                 disabled={(isExistingLead && !isEditingLead) || optionsLoading}
                 error={leadErrors.cityId}
               >
-                <option value="" className="text-black">בחר עיר</option>
+                <option value="" className="text-black">
+                  בחר עיר
+                </option>
                 {cities.map((item) => (
                   <option key={item.id} value={item.id} className="text-black">
                     {item.town}
@@ -925,7 +980,10 @@ export default function ConsultationPage() {
             )}
           </div>
 
-          <div className="rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
+          <div
+            ref={consultationCardRef}
+            className="rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10"
+          >
             <div className="flex items-center gap-3">
               <div className="rounded-xl bg-violet-500/12 p-2.5 text-violet-300">
                 <CalendarDays size={18} />
@@ -943,7 +1001,10 @@ export default function ConsultationPage() {
                     ...prev,
                     meetingDate: e.target.value,
                   }));
-                  setConsultationErrors((prev) => ({ ...prev, meetingDate: "" }));
+                  setConsultationErrors((prev) => ({
+                    ...prev,
+                    meetingDate: "",
+                  }));
                 }}
                 error={consultationErrors.meetingDate}
               />
@@ -957,7 +1018,10 @@ export default function ConsultationPage() {
                     ...prev,
                     meetingTime: e.target.value,
                   }));
-                  setConsultationErrors((prev) => ({ ...prev, meetingTime: "" }));
+                  setConsultationErrors((prev) => ({
+                    ...prev,
+                    meetingTime: "",
+                  }));
                 }}
                 error={consultationErrors.meetingTime}
               />
@@ -973,7 +1037,11 @@ export default function ConsultationPage() {
                 }
               >
                 {outcomeOptions.map((item) => (
-                  <option key={item.value} value={item.value} className="text-black">
+                  <option
+                    key={item.value}
+                    value={item.value}
+                    className="text-black"
+                  >
                     {item.label}
                   </option>
                 ))}
@@ -989,9 +1057,15 @@ export default function ConsultationPage() {
                   }))
                 }
               >
-                <option value="" className="text-black">הגיע / לא הגיע</option>
-                <option value="true" className="text-black">הגיע</option>
-                <option value="false" className="text-black">לא הגיע</option>
+                <option value="" className="text-black">
+                  הגיע / לא הגיע
+                </option>
+                <option value="true" className="text-black">
+                  הגיע
+                </option>
+                <option value="false" className="text-black">
+                  לא הגיע
+                </option>
               </SelectField>
 
               <TextareaField
@@ -1008,7 +1082,9 @@ export default function ConsultationPage() {
               />
 
               {consultationErrors.lead ? (
-                <div className="text-sm text-red-300">{consultationErrors.lead}</div>
+                <div className="text-sm text-red-300">
+                  {consultationErrors.lead}
+                </div>
               ) : null}
             </div>
 
@@ -1092,7 +1168,10 @@ export default function ConsultationPage() {
                         <div className="inline-flex items-center gap-2">
                           {item.arrived === true ? (
                             <>
-                              <CheckCircle2 size={15} className="text-emerald-300" />
+                              <CheckCircle2
+                                size={15}
+                                className="text-emerald-300"
+                              />
                               <span>כן</span>
                             </>
                           ) : item.arrived === false ? (
@@ -1139,6 +1218,28 @@ export default function ConsultationPage() {
               </table>
             </div>
           )}
+        </div>
+
+        <div className="mt-8 rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
+          <div className="flex items-center gap-3">
+            <div className="rounded-xl bg-sky-500/12 p-2.5 text-sky-300">
+              <CalendarDays size={18} />
+            </div>
+            <div className="text-lg font-bold">יומן פגישות ייעוץ</div>
+          </div>
+
+          <div className="mt-4 overflow-hidden rounded-2xl bg-white ring-1 ring-white/10">
+            <iframe
+              key={calendarRefreshKey}
+              src={calendarEmbedUrl}
+              style={{ border: 0 }}
+              width="100%"
+              height="720"
+              frameBorder="0"
+              scrolling="no"
+              title="יומן פגישות ייעוץ"
+            />
+          </div>
         </div>
       </div>
     </div>

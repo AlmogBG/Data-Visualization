@@ -69,15 +69,16 @@ model Lead {
 }
 
 model Consultation {
-  id          Int       @id @default(autoincrement())
-  leadId      Int       @map("lead_id")
-  meetingDate DateTime? @map("meeting_date")
-  outcome     String?
-  arrived     Boolean?
-  notes       String?   @map("notes")
-  createdAt   DateTime  @default(now()) @map("created_at")
+  id            Int       @id @default(autoincrement())
+  leadId        Int       @map("lead_id")
+  meetingDate   DateTime? @map("meeting_date")
+  outcome       String?
+  arrived       Boolean?
+  notes         String?   @map("notes")
+  googleEventId String?   @map("google_event_id")
+  createdAt     DateTime  @default(now()) @map("created_at")
 
-  lead        Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
 
   @@map("consultations")
 }

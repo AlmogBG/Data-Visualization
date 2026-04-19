@@ -1,6 +1,7 @@
 const prisma = require("../config/db");
 const {
-  notifyConsultationCreated,
+  upsertConsultationEvent,
+  syncLeadConsultationsToCalendar,
 } = require("../services/consultationNotificationService");
 
 function normalizeCampus(value) {
@@ -330,7 +331,7 @@ async function createConsultation(req, res) {
       });
     }
 
-    const consultation = await prisma.consultation.create({
+    let consultation = await prisma.consultation.create({
       data: {
         leadId: Number(leadId),
         meetingDate: new Date(meetingDate),
@@ -340,10 +341,19 @@ async function createConsultation(req, res) {
       },
     });
 
-    const notificationResult = await notifyConsultationCreated({
+    const syncResult = await upsertConsultationEvent({
       consultation,
       lead,
     });
+
+    if (syncResult.ok && syncResult.eventId) {
+      consultation = await prisma.consultation.update({
+        where: { id: consultation.id },
+        data: {
+          googleEventId: syncResult.eventId,
+        },
+      });
+    }
 
     console.log("consultation created successfully:", {
       id: consultation.id,
@@ -352,14 +362,15 @@ async function createConsultation(req, res) {
       outcome: consultation.outcome,
       arrived: consultation.arrived,
       notes: consultation.notes,
-      notificationResult,
+      googleEventId: consultation.googleEventId,
+      syncResult,
     });
 
     return res.status(201).json({
       ok: true,
       message: "פגישת הייעוץ נוצרה בהצלחה",
       consultation,
-      notificationResult,
+      syncResult,
     });
   } catch (error) {
     console.error("createConsultation error:", error);
@@ -392,21 +403,40 @@ async function getLeadConsultations(req, res) {
       });
     }
 
+    const syncResult = await syncLeadConsultationsToCalendar({
+      lead,
+      consultations: lead.consultations,
+    });
+
+    const refreshedLead = await prisma.lead.findUnique({
+      where: { id: Number(leadId) },
+      include: {
+        consultations: {
+          orderBy: {
+            meetingDate: "desc",
+          },
+        },
+        department: true,
+        city: true,
+      },
+    });
+
     return res.json({
       ok: true,
       lead: {
-        id: lead.id,
-        fullName: lead.fullName,
-        phone: lead.phone,
-        email: lead.email,
-        campus: lead.campus,
-        area: lead.area,
-        status: lead.status,
-        source: lead.source,
-        department: lead.department,
-        city: lead.city,
+        id: refreshedLead.id,
+        fullName: refreshedLead.fullName,
+        phone: refreshedLead.phone,
+        email: refreshedLead.email,
+        campus: refreshedLead.campus,
+        area: refreshedLead.area,
+        status: refreshedLead.status,
+        source: refreshedLead.source,
+        department: refreshedLead.department,
+        city: refreshedLead.city,
       },
-      consultations: lead.consultations,
+      consultations: refreshedLead.consultations,
+      syncResult,
     });
   } catch (error) {
     console.error("getLeadConsultations error:", error);
@@ -553,6 +583,14 @@ async function updateConsultation(req, res) {
 
     const existing = await prisma.consultation.findUnique({
       where: { id: Number(id) },
+      include: {
+        lead: {
+          include: {
+            department: true,
+            city: true,
+          },
+        },
+      },
     });
 
     if (!existing) {
@@ -561,7 +599,7 @@ async function updateConsultation(req, res) {
       });
     }
 
-    const updated = await prisma.consultation.update({
+    let updated = await prisma.consultation.update({
       where: { id: Number(id) },
       data: {
         ...(meetingDate ? { meetingDate: new Date(meetingDate) } : {}),
@@ -569,7 +607,29 @@ async function updateConsultation(req, res) {
         arrived: parseArrived(arrived),
         notes: normalizeNullableString(notes),
       },
+      include: {
+        lead: {
+          include: {
+            department: true,
+            city: true,
+          },
+        },
+      },
     });
+
+    const syncResult = await upsertConsultationEvent({
+      consultation: updated,
+      lead: updated.lead,
+    });
+
+    if (syncResult.ok && syncResult.eventId) {
+      updated = await prisma.consultation.update({
+        where: { id: updated.id },
+        data: {
+          googleEventId: syncResult.eventId,
+        },
+      });
+    }
 
     console.log("consultation updated successfully:", {
       id: updated.id,
@@ -578,12 +638,15 @@ async function updateConsultation(req, res) {
       outcome: updated.outcome,
       arrived: updated.arrived,
       notes: updated.notes,
+      googleEventId: updated.googleEventId,
+      syncResult,
     });
 
     return res.json({
       ok: true,
       message: "פגישת הייעוץ עודכנה בהצלחה",
       consultation: updated,
+      syncResult,
     });
   } catch (error) {
     console.error("updateConsultation error:", error);
