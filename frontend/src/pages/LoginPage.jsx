@@ -4,7 +4,7 @@ import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
 const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:10000";
+  process.env.REACT_APP_API_BASE_URL || "http://188.245.161.194:5000";
 
 export default function LoginPage() {
   const [menuOpen, setMenuOpen] = useState(false);

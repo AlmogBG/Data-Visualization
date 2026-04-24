@@ -13,7 +13,7 @@ import Sidebar from "../components/Sidebar";
 import TopNavbar from "../components/TopNavbar";
 
 const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "http://localhost:10000";
+  process.env.REACT_APP_API_BASE_URL || "http://188.245.161.194:5000";
 
 const months = [
   { key: "ALL", label: "בחר הכל" },
