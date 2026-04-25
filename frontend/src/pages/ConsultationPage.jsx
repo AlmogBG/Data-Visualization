@@ -9,6 +9,7 @@ import {
   createConsultation,
   getLeadConsultations,
   updateConsultation,
+  deleteConsultation,
 } from "../api/consultationApi";
 import {
   Search,
@@ -33,6 +34,7 @@ import {
   BadgeInfo,
   SquarePen,
   X,
+  Trash2,
 } from "lucide-react";
 
 const campusOptions = ["אשדוד", "באר שבע"];
@@ -227,6 +229,7 @@ export default function ConsultationPage() {
 
   const [savingLead, setSavingLead] = useState(false);
   const [savingConsultation, setSavingConsultation] = useState(false);
+  const [deletingConsultationId, setDeletingConsultationId] = useState(null);
   const [isEditingLead, setIsEditingLead] = useState(false);
 
   const consultationCardRef = useRef(null);
@@ -258,6 +261,7 @@ export default function ConsultationPage() {
 
   async function refreshLeadConsultations(leadId) {
     const data = await getLeadConsultations(leadId);
+
     setSelectedLead(data.lead);
     setConsultations(data.consultations || []);
 
@@ -273,6 +277,10 @@ export default function ConsultationPage() {
         : "",
       cityId: data.lead?.city?.id ? String(data.lead.city.id) : "",
     });
+  }
+
+  function refreshCalendarIframe() {
+    setCalendarRefreshKey((prev) => prev + 1);
   }
 
   async function handleSearch() {
@@ -314,9 +322,7 @@ export default function ConsultationPage() {
 
     setIsEditingLead(false);
     setLeadErrors({});
-
     await refreshLeadConsultations(lead.id);
-    setCalendarRefreshKey((prev) => prev + 1);
   }
 
   function handleClearSearchAndLeadSection() {
@@ -330,7 +336,6 @@ export default function ConsultationPage() {
     setLeadErrors({});
     setConsultationForm(emptyConsultationForm);
     setConsultationErrors({});
-    setCalendarRefreshKey((prev) => prev + 1);
   }
 
   function handleClearConsultationForm() {
@@ -426,7 +431,7 @@ export default function ConsultationPage() {
 
         setSelectedLead({
           id: data.lead.id,
-          fullName: data.lead.fullName,
+          fullName: data.lead.fullName || "",
           phone: data.lead.phone || "",
           email: data.lead.email || "",
           campus: data.lead.campus || "",
@@ -460,7 +465,7 @@ export default function ConsultationPage() {
       const lead = data.lead;
       setSelectedLead({
         id: lead.id,
-        fullName: lead.fullName,
+        fullName: lead.fullName || "",
         phone: lead.phone || "",
         email: lead.email || "",
         campus: lead.campus || "",
@@ -521,11 +526,38 @@ export default function ConsultationPage() {
 
       handleClearConsultationForm();
       await refreshLeadConsultations(leadId);
-      setCalendarRefreshKey((prev) => prev + 1);
+      refreshCalendarIframe();
     } catch (error) {
       alert(error.message);
     } finally {
       setSavingConsultation(false);
+    }
+  }
+
+  async function handleDeleteConsultation(id) {
+    const confirmed = window.confirm("האם למחוק את פגישת הייעוץ?");
+
+    if (!confirmed) return;
+
+    try {
+      setDeletingConsultationId(id);
+
+      await deleteConsultation(id);
+
+      if (editingConsultationId === id) {
+        handleClearConsultationForm();
+      }
+
+      if (selectedLead?.id) {
+        await refreshLeadConsultations(selectedLead.id);
+      }
+
+      refreshCalendarIframe();
+      alert("פגישת הייעוץ נמחקה בהצלחה");
+    } catch (error) {
+      alert(error.message);
+    } finally {
+      setDeletingConsultationId(null);
     }
   }
 
@@ -1133,7 +1165,7 @@ export default function ConsultationPage() {
             </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[900px] border-separate border-spacing-y-2.5">
+              <table className="w-full min-w-[980px] border-separate border-spacing-y-2.5">
                 <thead>
                   <tr className="text-right text-sm text-white/60">
                     <th className="px-3">תאריך פגישה</th>
@@ -1203,14 +1235,28 @@ export default function ConsultationPage() {
                       </td>
 
                       <td className="px-3 py-3.5">
-                        <button
-                          type="button"
-                          onClick={() => handleEditConsultation(item)}
-                          className="inline-flex h-9 items-center gap-2 rounded-xl bg-sky-500/18 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/25 transition hover:bg-sky-500/28"
-                        >
-                          <Pencil size={14} />
-                          ערוך
-                        </button>
+                        <div className="flex items-center gap-2">
+                          <button
+                            type="button"
+                            onClick={() => handleEditConsultation(item)}
+                            className="inline-flex h-9 items-center gap-2 rounded-xl bg-sky-500/18 px-4 text-sm font-semibold text-sky-100 ring-1 ring-sky-300/25 transition hover:bg-sky-500/28"
+                          >
+                            <Pencil size={14} />
+                            ערוך
+                          </button>
+
+                          <button
+                            type="button"
+                            onClick={() => handleDeleteConsultation(item.id)}
+                            disabled={deletingConsultationId === item.id}
+                            className="inline-flex h-9 items-center gap-2 rounded-xl bg-rose-500/16 px-4 text-sm font-semibold text-rose-100 ring-1 ring-rose-300/25 transition hover:bg-rose-500/24 disabled:opacity-60"
+                          >
+                            <Trash2 size={14} />
+                            {deletingConsultationId === item.id
+                              ? "מוחק..."
+                              : "מחק"}
+                          </button>
+                        </div>
                       </td>
                     </tr>
                   ))}
@@ -1221,11 +1267,13 @@ export default function ConsultationPage() {
         </div>
 
         <div className="mt-8 rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-sky-500/12 p-2.5 text-sky-300">
-              <CalendarDays size={18} />
+          <div className="flex items-center justify-between gap-3">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-sky-500/12 p-2.5 text-sky-300">
+                <CalendarDays size={18} />
+              </div>
+              <div className="text-lg font-bold">יומן פגישות ייעוץ</div>
             </div>
-            <div className="text-lg font-bold">יומן פגישות ייעוץ</div>
           </div>
 
           <div className="mt-4 overflow-hidden rounded-2xl bg-white ring-1 ring-white/10">

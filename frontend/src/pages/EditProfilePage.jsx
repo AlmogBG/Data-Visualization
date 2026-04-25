@@ -38,6 +38,7 @@ export default function EditProfilePage() {
     }
 
     const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
     if (!emailRegex.test(trimmedEmail)) {
       alert("נא להזין כתובת אימייל תקינה");
       return;
@@ -141,6 +142,7 @@ export default function EditProfilePage() {
           <h1 className="text-3xl font-extrabold tracking-tight">
             עריכת פרטים אישיים
           </h1>
+
           <p className="mt-2 text-sm text-white/75">
             כאן ניתן לעדכן את כתובת האימייל של המשתמש
           </p>
@@ -152,6 +154,7 @@ export default function EditProfilePage() {
               <label className="mb-2 block text-sm font-semibold text-white/90">
                 שם מלא
               </label>
+
               <input
                 type="text"
                 value={fullName}
@@ -164,6 +167,7 @@ export default function EditProfilePage() {
               <label className="mb-2 block text-sm font-semibold text-white/90">
                 אימייל
               </label>
+
               <input
                 type="email"
                 value={email}
@@ -178,6 +182,7 @@ export default function EditProfilePage() {
                 <label className="mb-2 block text-sm font-semibold text-white/90">
                   קוד אימות
                 </label>
+
                 <input
                   type="text"
                   value={verificationCode}

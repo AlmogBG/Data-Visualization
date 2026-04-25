@@ -1,7 +1,7 @@
 const prisma = require("../config/db");
 const {
   upsertConsultationEvent,
-  syncLeadConsultationsToCalendar,
+  deleteConsultationFromCalendar,
 } = require("../services/consultationNotificationService");
 
 function normalizeCampus(value) {
@@ -194,6 +194,7 @@ async function searchLeads(req, res) {
         arrived: c.arrived,
         notes: c.notes,
         createdAt: c.createdAt,
+        googleEventId: c.googleEventId,
       })),
     }));
 
@@ -239,7 +240,8 @@ async function createLead(req, res) {
     }
 
     const trimmedPhone = phone.trim();
-    const normalizedEmail = normalizeNullableString(email)?.toLowerCase() || null;
+    const normalizedEmail =
+      normalizeNullableString(email)?.toLowerCase() || null;
     const normalizedCampus = normalizeCampus(campus);
     const normalizedSource = normalizeSource(source);
 
@@ -346,7 +348,18 @@ async function createConsultation(req, res) {
       lead,
     });
 
-    if (syncResult.ok && syncResult.eventId) {
+    if (!syncResult?.ok) {
+      await prisma.consultation.delete({
+        where: { id: consultation.id },
+      });
+
+      return res.status(500).json({
+        message: "פגישת הייעוץ לא נשמרה כי הסנכרון ליומן נכשל",
+        syncResult,
+      });
+    }
+
+    if (syncResult.eventId) {
       consultation = await prisma.consultation.update({
         where: { id: consultation.id },
         data: {
@@ -354,17 +367,6 @@ async function createConsultation(req, res) {
         },
       });
     }
-
-    console.log("consultation created successfully:", {
-      id: consultation.id,
-      leadId: consultation.leadId,
-      meetingDate: consultation.meetingDate,
-      outcome: consultation.outcome,
-      arrived: consultation.arrived,
-      notes: consultation.notes,
-      googleEventId: consultation.googleEventId,
-      syncResult,
-    });
 
     return res.status(201).json({
       ok: true,
@@ -403,40 +405,21 @@ async function getLeadConsultations(req, res) {
       });
     }
 
-    const syncResult = await syncLeadConsultationsToCalendar({
-      lead,
-      consultations: lead.consultations,
-    });
-
-    const refreshedLead = await prisma.lead.findUnique({
-      where: { id: Number(leadId) },
-      include: {
-        consultations: {
-          orderBy: {
-            meetingDate: "desc",
-          },
-        },
-        department: true,
-        city: true,
-      },
-    });
-
     return res.json({
       ok: true,
       lead: {
-        id: refreshedLead.id,
-        fullName: refreshedLead.fullName,
-        phone: refreshedLead.phone,
-        email: refreshedLead.email,
-        campus: refreshedLead.campus,
-        area: refreshedLead.area,
-        status: refreshedLead.status,
-        source: refreshedLead.source,
-        department: refreshedLead.department,
-        city: refreshedLead.city,
+        id: lead.id,
+        fullName: lead.fullName,
+        phone: lead.phone,
+        email: lead.email,
+        campus: lead.campus,
+        area: lead.area,
+        status: lead.status,
+        source: lead.source,
+        department: lead.department,
+        city: lead.city,
       },
-      consultations: refreshedLead.consultations,
-      syncResult,
+      consultations: lead.consultations,
     });
   } catch (error) {
     console.error("getLeadConsultations error:", error);
@@ -491,7 +474,8 @@ async function updateLead(req, res) {
     }
 
     const trimmedPhone = phone.trim();
-    const normalizedEmail = normalizeNullableString(email)?.toLowerCase() || null;
+    const normalizedEmail =
+      normalizeNullableString(email)?.toLowerCase() || null;
     const normalizedCampus = normalizeCampus(campus);
     const normalizedSource = normalizeSource(source);
 
@@ -511,21 +495,6 @@ async function updateLead(req, res) {
       });
     }
 
-    const beforeUpdate = {
-      id: existingLead.id,
-      fullName: existingLead.fullName,
-      phone: existingLead.phone,
-      email: existingLead.email,
-      campus: existingLead.campus,
-      area: existingLead.area,
-      source: existingLead.source,
-      status: existingLead.status,
-      departmentId: existingLead.departmentId,
-      departmentName: existingLead.department?.name || null,
-      cityId: existingLead.cityId,
-      cityName: existingLead.city?.town || null,
-    };
-
     const updatedLead = await prisma.lead.update({
       where: { id: Number(id) },
       data: {
@@ -543,25 +512,6 @@ async function updateLead(req, res) {
         city: true,
       },
     });
-
-    const afterUpdate = {
-      id: updatedLead.id,
-      fullName: updatedLead.fullName,
-      phone: updatedLead.phone,
-      email: updatedLead.email,
-      campus: updatedLead.campus,
-      area: updatedLead.area,
-      source: updatedLead.source,
-      status: updatedLead.status,
-      departmentId: updatedLead.departmentId,
-      departmentName: updatedLead.department?.name || null,
-      cityId: updatedLead.cityId,
-      cityName: updatedLead.city?.town || null,
-    };
-
-    console.log("lead updated successfully:");
-    console.log("before:", beforeUpdate);
-    console.log("after:", afterUpdate);
 
     return res.json({
       ok: true,
@@ -599,6 +549,14 @@ async function updateConsultation(req, res) {
       });
     }
 
+    const previousValues = {
+      meetingDate: existing.meetingDate,
+      outcome: existing.outcome,
+      arrived: existing.arrived,
+      notes: existing.notes,
+      googleEventId: existing.googleEventId,
+    };
+
     let updated = await prisma.consultation.update({
       where: { id: Number(id) },
       data: {
@@ -622,25 +580,34 @@ async function updateConsultation(req, res) {
       lead: updated.lead,
     });
 
-    if (syncResult.ok && syncResult.eventId) {
+    if (!syncResult?.ok) {
+      await prisma.consultation.update({
+        where: { id: Number(id) },
+        data: previousValues,
+      });
+
+      return res.status(500).json({
+        message: "פגישת הייעוץ לא עודכנה כי הסנכרון ליומן נכשל",
+        syncResult,
+      });
+    }
+
+    if (syncResult.eventId && updated.googleEventId !== syncResult.eventId) {
       updated = await prisma.consultation.update({
         where: { id: updated.id },
         data: {
           googleEventId: syncResult.eventId,
         },
+        include: {
+          lead: {
+            include: {
+              department: true,
+              city: true,
+            },
+          },
+        },
       });
     }
-
-    console.log("consultation updated successfully:", {
-      id: updated.id,
-      leadId: updated.leadId,
-      meetingDate: updated.meetingDate,
-      outcome: updated.outcome,
-      arrived: updated.arrived,
-      notes: updated.notes,
-      googleEventId: updated.googleEventId,
-      syncResult,
-    });
 
     return res.json({
       ok: true,
@@ -656,6 +623,48 @@ async function updateConsultation(req, res) {
   }
 }
 
+async function deleteConsultation(req, res) {
+  try {
+    const { id } = req.params;
+
+    const existing = await prisma.consultation.findUnique({
+      where: { id: Number(id) },
+    });
+
+    if (!existing) {
+      return res.status(404).json({
+        message: "פגישת הייעוץ לא נמצאה",
+      });
+    }
+
+    const deleteCalendarResult = await deleteConsultationFromCalendar({
+      consultation: existing,
+    });
+
+    if (!deleteCalendarResult?.ok) {
+      return res.status(500).json({
+        message: "מחיקת פגישת הייעוץ נעצרה כי המחיקה מהיומן נכשלה",
+        deleteCalendarResult,
+      });
+    }
+
+    await prisma.consultation.delete({
+      where: { id: Number(id) },
+    });
+
+    return res.json({
+      ok: true,
+      message: "פגישת הייעוץ נמחקה בהצלחה",
+      deleteCalendarResult,
+    });
+  } catch (error) {
+    console.error("deleteConsultation error:", error);
+    return res.status(500).json({
+      message: "שגיאת שרת במחיקת פגישת ייעוץ",
+    });
+  }
+}
+
 module.exports = {
   getConsultationFormOptions,
   searchLeads,
@@ -664,4 +673,5 @@ module.exports = {
   createConsultation,
   getLeadConsultations,
   updateConsultation,
+  deleteConsultation,
 };

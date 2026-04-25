@@ -60,6 +60,7 @@ function genRandomValue(seed, min, max) {
 
 function getMonthsLabel(selectedMonths) {
   if (selectedMonths.includes("ALL")) return "כל החודשים";
+
   const map = new Map(months.map((m) => [m.key, m.label]));
   return selectedMonths.map((k) => map.get(k)).join(", ");
 }
@@ -132,6 +133,7 @@ function TrendArrow({ dir }) {
   if (dir === "neutral") return null;
 
   const isUp = dir === "up";
+
   return (
     <svg
       viewBox="0 0 24 24"
@@ -162,6 +164,7 @@ function CustomTooltip({ active, payload, label, yearA, yearB, monthsLabel }) {
 
   const selected = payload.find((p) => p.dataKey === "yearB")?.value ?? 0;
   const compare = payload.find((p) => p.dataKey === "yearA")?.value ?? 0;
+
   const delta = calcDelta(selected, compare);
   const deltaPct = calcDeltaPct(selected, compare);
 
@@ -180,12 +183,14 @@ function CustomTooltip({ active, payload, label, yearA, yearB, monthsLabel }) {
       <div className="text-sm text-slate-200">
         {yearB}: <span className="font-semibold">{fmtInt(selected)}</span>
       </div>
+
       <div className="text-sm text-slate-200">
         {yearA}: <span className="font-semibold">{fmtInt(compare)}</span>
       </div>
 
       <div className={`mt-1 text-sm ${deltaColor}`}>
-        שינוי: <span className="font-semibold">{fmtInt(delta)}</span> ({fmtPct(deltaPct)})
+        שינוי: <span className="font-semibold">{fmtInt(delta)}</span> (
+        {fmtPct(deltaPct)})
       </div>
     </div>
   );
@@ -337,7 +342,13 @@ export default function Report2() {
           setApiMode("api");
         }
       } catch (error) {
-        const mock = buildMockChartData({ yearA, yearB, selectedMonths });
+        console.error("Report2 API error:", error);
+
+        const mock = buildMockChartData({
+          yearA,
+          yearB,
+          selectedMonths,
+        });
 
         if (!cancelled) {
           setChartData(mock);
@@ -401,6 +412,7 @@ export default function Report2() {
         <div className="mt-6 text-center">
           <div className="inline-flex items-center justify-center gap-3 align-middle">
             <IcoTitle />
+
             <h1 className="leading-none text-3xl font-extrabold tracking-tight">
               דוח 2 - ביקושי המחלקות של הנרשמים למכללה בהשוואה לשנים האחרונות
             </h1>
@@ -420,6 +432,7 @@ export default function Report2() {
         <div className="mt-6 flex flex-col items-center justify-between gap-4 lg:flex-row">
           <div className="flex items-center gap-3">
             <div className="text-sm text-white/80">שנה</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={yearB}
@@ -431,6 +444,7 @@ export default function Report2() {
             </select>
 
             <div className="text-sm text-white/80">בהשוואה ל-</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={yearA}
@@ -477,14 +491,18 @@ export default function Report2() {
                 <table className="w-full text-sm">
                   <thead className="bg-white/5">
                     <tr className="text-slate-200/90">
-                      <th className="px-4 py-3 text-right font-semibold">מחלקה</th>
+                      <th className="px-4 py-3 text-right font-semibold">
+                        מחלקה
+                      </th>
                       <th className="px-4 py-3 text-left font-semibold">
                         {buildTableHeader(yearB, monthsLabel)}
                       </th>
                       <th className="px-4 py-3 text-left font-semibold">
                         {buildTableHeader(yearA, monthsLabel)}
                       </th>
-                      <th className="px-4 py-3 text-left font-semibold">שינוי</th>
+                      <th className="px-4 py-3 text-left font-semibold">
+                        שינוי
+                      </th>
                     </tr>
                   </thead>
 
@@ -509,14 +527,18 @@ export default function Report2() {
                           <td className="px-4 py-3 font-medium text-slate-50">
                             {r.department}
                           </td>
+
                           <td className="px-4 py-3 text-left text-slate-100">
                             {fmtInt(r.selected)}
                           </td>
+
                           <td className="px-4 py-3 text-left text-slate-100">
                             {fmtInt(r.compare)}
                           </td>
 
-                          <td className={`px-4 py-3 text-left font-semibold ${pctColor}`}>
+                          <td
+                            className={`px-4 py-3 text-left font-semibold ${pctColor}`}
+                          >
                             <div className="flex items-center justify-end gap-2">
                               <span>
                                 {fmtInt(r.delta)} ({fmtPct(r.deltaPct)})
@@ -599,6 +621,7 @@ export default function Report2() {
                         strokeWidth: 2,
                       }}
                     />
+
                     <Bar
                       dataKey="yearA"
                       name={yearA}

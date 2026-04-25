@@ -14,7 +14,7 @@ function buildConsultationPayload({ consultation, lead }) {
     city: lead?.city?.town || "",
     source: lead?.source || "",
     notes: consultation?.notes || "",
-    meetingDateTime: consultation.meetingDate,
+    meetingDateTime: consultation?.meetingDate,
     durationMinutes: 60,
   };
 }
@@ -63,52 +63,41 @@ async function callAppsScript(payload) {
 }
 
 async function upsertConsultationEvent({ consultation, lead }) {
+  if (!consultation?.meetingDate) {
+    return {
+      ok: false,
+      error: "Missing meetingDate",
+    };
+  }
+
   const payload = buildConsultationPayload({ consultation, lead });
-  return callAppsScript(payload);
-}
+  const syncResult = await callAppsScript(payload);
 
-async function syncLeadConsultationsToCalendar({ lead, consultations }) {
-  const results = [];
-
-  for (const consultation of consultations) {
-    if (!consultation.meetingDate) {
-      results.push({
-        consultationId: consultation.id,
-        ok: false,
-        error: "Missing meetingDate",
-      });
-      continue;
-    }
-
-    const syncResult = await upsertConsultationEvent({
-      consultation,
-      lead,
-    });
-
-    if (syncResult.ok && syncResult.eventId) {
-      if (consultation.googleEventId !== syncResult.eventId) {
-        await prisma.consultation.update({
-          where: { id: consultation.id },
-          data: {
-            googleEventId: syncResult.eventId,
-          },
-        });
-      }
-    }
-
-    results.push({
-      consultationId: consultation.id,
-      ...syncResult,
+  if (
+    syncResult.ok &&
+    syncResult.eventId &&
+    consultation.googleEventId !== syncResult.eventId
+  ) {
+    await prisma.consultation.update({
+      where: { id: consultation.id },
+      data: {
+        googleEventId: syncResult.eventId,
+      },
     });
   }
 
-  return {
-    ok: results.every((item) => item.ok),
-    results,
-  };
+  return syncResult;
+}
+
+async function deleteConsultationFromCalendar({ consultation }) {
+  return callAppsScript({
+    action: "delete",
+    consultationId: consultation.id,
+    eventId: consultation.googleEventId || "",
+  });
 }
 
 module.exports = {
   upsertConsultationEvent,
-  syncLeadConsultationsToCalendar,
+  deleteConsultationFromCalendar,
 };

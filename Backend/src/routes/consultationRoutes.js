@@ -9,6 +9,7 @@ const {
   createConsultation,
   getLeadConsultations,
   updateConsultation,
+  deleteConsultation,
 } = require("../controllers/consultationController");
 
 router.get("/form/options", getConsultationFormOptions);
@@ -19,5 +20,6 @@ router.put("/leads/:id", updateLead);
 router.post("/consultations", createConsultation);
 router.get("/consultations/lead/:leadId", getLeadConsultations);
 router.put("/consultations/:id", updateConsultation);
+router.delete("/consultations/:id", deleteConsultation);
 
 module.exports = router;

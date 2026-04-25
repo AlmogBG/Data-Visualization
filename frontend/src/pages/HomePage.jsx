@@ -14,9 +14,11 @@ function trendFromDelta(deltaPct) {
   if (deltaPct > 0) {
     return { type: "up", text: `+${deltaPct}% לעומת חודש קודם` };
   }
+
   if (deltaPct < 0) {
     return { type: "down", text: `${deltaPct}% לעומת חודש קודם` };
   }
+
   return { type: "neutral", text: "ללא שינוי" };
 }
 
@@ -43,10 +45,25 @@ function GroupCard({ title, icon: Icon, iconClassName = "", items }) {
   );
 }
 
+function createUpdatedAtText() {
+  const now = new Date();
+
+  const time = now.toLocaleTimeString("he-IL", {
+    hour: "2-digit",
+    minute: "2-digit",
+    second: "2-digit",
+  });
+
+  const date = now.toLocaleDateString("he-IL");
+
+  return `${time}, ${date}`;
+}
+
 export default function HomePage() {
   const [menuOpen, setMenuOpen] = useState(false);
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [updatedAt, setUpdatedAt] = useState(createUpdatedAtText());
 
   useEffect(() => {
     let cancelled = false;
@@ -54,10 +71,12 @@ export default function HomePage() {
     async function loadSummary() {
       try {
         setLoading(true);
+
         const data = await getHomeSummary();
 
         if (!cancelled) {
           setSummary(data);
+          setUpdatedAt(createUpdatedAtText());
         }
       } catch (error) {
         console.error("Failed to load home summary:", error);
@@ -91,6 +110,8 @@ export default function HomePage() {
               canceledMeetings: 0,
             },
           });
+
+          setUpdatedAt(createUpdatedAtText());
         }
       } finally {
         if (!cancelled) {
@@ -193,17 +214,6 @@ export default function HomePage() {
     };
   }, [summary]);
 
-  const updatedAt = useMemo(() => {
-    const now = new Date();
-    const time = now.toLocaleTimeString("he-IL", {
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-    });
-    const date = now.toLocaleDateString("he-IL");
-    return `${time}, ${date}`;
-  }, [summary]);
-
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
       <TopNavbar />
@@ -215,6 +225,7 @@ export default function HomePage() {
             <HiOutlineChartBar className="text-4xl text-sky-300" />
             סיכום פעילויות מחלקת הרישום
           </h1>
+
           <p className="mt-2 text-sm text-white/75">
             תצוגה מרוכזת של לידים, פגישות ומכירות – בזמן כמעט אמת.
             {loading ? <span className="mr-2">(טוען...)</span> : null}
@@ -228,12 +239,14 @@ export default function HomePage() {
             iconClassName="text-sky-300"
             items={data.kids}
           />
+
           <GroupCard
             title="מכירות"
             icon={HiOutlineCurrencyDollar}
             iconClassName="text-emerald-300"
             items={data.sales}
           />
+
           <GroupCard
             title="פגישות"
             icon={HiOutlineCalendarDays}

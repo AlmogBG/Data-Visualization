@@ -49,6 +49,7 @@ const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(n);
 
 function getMonthsLabel(selectedMonths) {
   if (selectedMonths.includes("ALL")) return "כל החודשים";
+
   const map = new Map(months.map((m) => [m.key, m.label]));
   return selectedMonths.map((k) => map.get(k)).join(", ");
 }
@@ -63,15 +64,29 @@ function genRandomValue(seed, min, max) {
   return Math.floor(min + r * (max - min + 1));
 }
 
-const monthKeys = ["01", "02", "03", "04", "05", "06", "07", "08", "09", "10", "11", "12"];
+const monthKeys = [
+  "01",
+  "02",
+  "03",
+  "04",
+  "05",
+  "06",
+  "07",
+  "08",
+  "09",
+  "10",
+  "11",
+  "12",
+];
 
 function getYearSuffix(yearLabel) {
   const map = {
-    'תשפ״ב': "22",
-    'תשפ״ג': "23",
-    'תשפ״ד': "24",
-    'תשפ״ה': "25",
+    "תשפ״ב": "22",
+    "תשפ״ג": "23",
+    "תשפ״ד": "24",
+    "תשפ״ה": "25",
   };
+
   return map[yearLabel] || "25";
 }
 
@@ -91,6 +106,7 @@ function buildMockMonthly({ year, selectedMonths }) {
       0,
       Math.round(invitedAshdod * (0.72 + seededRand(seedBase + 91) * 0.2))
     );
+
     const attendedBeer = Math.max(
       0,
       Math.round(invitedBeer * (0.7 + seededRand(seedBase + 97) * 0.22))
@@ -127,15 +143,20 @@ const OUTCOME_COLORS = [
 
 function buildMockOutcomePie({ year, selectedMonths, campusKey }) {
   const useAll = selectedMonths.includes("ALL");
-  const monthFactor = useAll ? 12 : Math.max(1, selectedMonths.filter((m) => m !== "ALL").length);
+  const monthFactor = useAll
+    ? 12
+    : Math.max(1, selectedMonths.filter((m) => m !== "ALL").length);
 
   const campusFactor = campusKey === "ASHDOD" ? 1.1 : 0.95;
+
   const seedBase =
     [...year].reduce((a, ch) => a + ch.charCodeAt(0), 0) * 13 +
     monthFactor * 17 +
     (campusKey === "ASHDOD" ? 101 : 202);
 
-  const total = Math.round(genRandomValue(seedBase + 1, 280, 520) * campusFactor);
+  const total = Math.round(
+    genRandomValue(seedBase + 1, 280, 520) * campusFactor
+  );
 
   const raw = [
     genRandomValue(seedBase + 11, 18, 34),
@@ -147,12 +168,16 @@ function buildMockOutcomePie({ year, selectedMonths, campusKey }) {
   ];
 
   const sumRaw = raw.reduce((a, b) => a + b, 0);
-  const counts = raw.map((w) => Math.max(0, Math.round((w / sumRaw) * total)));
+  const counts = raw.map((w) =>
+    Math.max(0, Math.round((w / sumRaw) * total))
+  );
 
   let diff = total - counts.reduce((a, b) => a + b, 0);
   let i = 0;
+
   while (diff !== 0 && i < 200) {
     const idx = i % counts.length;
+
     if (diff > 0) {
       counts[idx] += 1;
       diff -= 1;
@@ -160,7 +185,8 @@ function buildMockOutcomePie({ year, selectedMonths, campusKey }) {
       counts[idx] -= 1;
       diff += 1;
     }
-    i++;
+
+    i += 1;
   }
 
   return outcomes.map((o, idx) => ({
@@ -179,6 +205,7 @@ function CustomTooltip({ active, payload, label, mode }) {
   return (
     <div className="rounded-xl border border-slate-700/40 bg-slate-950/90 p-3 text-slate-100 shadow-lg">
       <div className="mb-1 font-bold">{label}</div>
+
       <div className="text-sm text-slate-200">
         {mode === "invited" ? "נרשמו/הוזמנו" : "הגיעו בפועל"}
       </div>
@@ -188,6 +215,7 @@ function CustomTooltip({ active, payload, label, mode }) {
           אשדוד: <span className="font-semibold">{fmtInt(a)}</span>
         </div>
       )}
+
       {b !== null && (
         <div className="text-sm text-slate-200">
           באר שבע: <span className="font-semibold">{fmtInt(b)}</span>
@@ -215,7 +243,12 @@ function SubtleCursor({ x, y, width, height }) {
 
 function MiniIcon({ children, className = "", size = "h-6 w-6" }) {
   return (
-    <svg viewBox="0 0 24 24" className={`${size} ${className}`} fill="none" aria-hidden="true">
+    <svg
+      viewBox="0 0 24 24"
+      className={`${size} ${className}`}
+      fill="none"
+      aria-hidden="true"
+    >
       {children}
     </svg>
   );
@@ -227,8 +260,18 @@ function IcoReportTitle() {
       size="h-10 w-10"
       className="text-white/60 align-middle -translate-y-[1px]"
     >
-      <path d="M4 19V5m0 14h16" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
-      <path d="M8 15V9m4 6V7m4 8v-5" stroke="currentColor" strokeWidth="2" strokeLinecap="round" />
+      <path
+        d="M4 19V5m0 14h16"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
+      <path
+        d="M8 15V9m4 6V7m4 8v-5"
+        stroke="currentColor"
+        strokeWidth="2"
+        strokeLinecap="round"
+      />
     </MiniIcon>
   );
 }
@@ -254,15 +297,18 @@ function IcoPie() {
 
 function PieTooltip({ active, payload, label }) {
   if (!active || !payload?.length) return null;
+
   const p = payload[0];
   const total = payload?.[0]?.payload?.__total ?? null;
 
   return (
     <div className="rounded-xl border border-slate-700/40 bg-slate-950/90 p-3 text-slate-100 shadow-lg">
       <div className="mb-1 font-bold">{label ?? p?.name}</div>
+
       <div className="text-sm text-slate-200">
         כמות: <span className="font-semibold">{fmtInt(p?.value ?? 0)}</span>
       </div>
+
       {total ? (
         <div className="mt-1 text-xs text-white/60">
           מתוך {fmtInt(total)} סה"כ
@@ -288,7 +334,15 @@ function PieLegend({ items }) {
   );
 }
 
-function renderPieLabel({ cx, cy, midAngle, innerRadius, outerRadius, percent, value }) {
+function renderPieLabel({
+  cx,
+  cy,
+  midAngle,
+  innerRadius,
+  outerRadius,
+  percent,
+  value,
+}) {
   if (!percent || percent < 0.04) return null;
 
   const RADIAN = Math.PI / 180;
@@ -328,6 +382,7 @@ function PieCard({ title, data }) {
         <ResponsiveContainer width="100%" height={260}>
           <PieChart>
             <Tooltip content={<PieTooltip />} />
+
             <Pie
               data={dataWithTotal}
               dataKey="value"
@@ -431,7 +486,10 @@ export default function Report4() {
       } catch (error) {
         console.error("Report4 API error:", error);
 
-        const mockData = buildMockMonthly({ year, selectedMonths });
+        const mockData = buildMockMonthly({
+          year,
+          selectedMonths,
+        });
 
         const adjusted =
           campus === "ASHDOD"
@@ -450,6 +508,7 @@ export default function Report4() {
 
         if (!cancelled) {
           setData(adjusted);
+
           setPieAshdod(
             buildMockOutcomePie({
               year,
@@ -457,6 +516,7 @@ export default function Report4() {
               campusKey: "ASHDOD",
             })
           );
+
           setPieBeer(
             buildMockOutcomePie({
               year,
@@ -464,6 +524,7 @@ export default function Report4() {
               campusKey: "BEER_SHEVA",
             })
           );
+
           setApiMode("mock");
         }
       } finally {
@@ -510,6 +571,7 @@ export default function Report4() {
         <div className="mt-6 text-center">
           <div className="inline-flex items-center gap-3">
             <IcoReportTitle />
+
             <h1 className="text-3xl font-extrabold tracking-tight">
               דוח 4 – ניתוח הגעה למפגשי ייעוץ
             </h1>
@@ -530,6 +592,7 @@ export default function Report4() {
         <div className="mt-6 flex flex-col items-center justify-between gap-4 lg:flex-row">
           <div className="flex flex-wrap items-center gap-3">
             <div className="text-sm text-white/80">קמפוס</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={campus}
@@ -543,6 +606,7 @@ export default function Report4() {
             </select>
 
             <div className="text-sm text-white/80">שנה</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={year}
@@ -559,6 +623,7 @@ export default function Report4() {
           <div className="flex flex-wrap justify-center gap-2">
             {months.map((m) => {
               const active = selectedMonths.includes(m.key);
+
               return (
                 <button
                   key={m.key}
@@ -592,23 +657,46 @@ export default function Report4() {
                 <div className="mb-2 text-sm font-semibold text-white/90">
                   נרשמו/הוזמנו לפגישת ייעוץ לפי חודש
                 </div>
+
                 <div className="rounded-2xl bg-white/6 p-3 ring-1 ring-white/5">
                   <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={data} margin={{ top: 10, right: 14, left: 8, bottom: 6 }}>
-                      <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.06)" />
+                    <LineChart
+                      data={data}
+                      margin={{ top: 10, right: 14, left: 8, bottom: 6 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 6"
+                        stroke="rgba(255,255,255,0.06)"
+                      />
+
                       <XAxis
                         dataKey="label"
-                        tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.75)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={{ stroke: "rgba(255,255,255,0.18)" }}
                       />
+
                       <YAxis
-                        tick={{ fill: "rgba(255,255,255,0.70)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.70)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={false}
                       />
-                      <Tooltip content={<CustomTooltip mode="invited" />} cursor={<SubtleCursor />} />
-                      <Legend wrapperStyle={{ color: "rgba(255,255,255,0.70)" }} />
+
+                      <Tooltip
+                        content={<CustomTooltip mode="invited" />}
+                        cursor={<SubtleCursor />}
+                      />
+
+                      <Legend
+                        wrapperStyle={{ color: "rgba(255,255,255,0.70)" }}
+                      />
+
                       <Line
                         type="monotone"
                         dataKey="invitedAshdod"
@@ -618,6 +706,7 @@ export default function Report4() {
                         dot={{ r: 4, strokeWidth: 2, fill: "#e5f0ff" }}
                         connectNulls
                       />
+
                       <Line
                         type="monotone"
                         dataKey="invitedBeer"
@@ -636,23 +725,46 @@ export default function Report4() {
                 <div className="mb-2 text-sm font-semibold text-white/90">
                   הגיעו לפגישת ייעוץ לפי חודש
                 </div>
+
                 <div className="rounded-2xl bg-white/6 p-3 ring-1 ring-white/5">
                   <ResponsiveContainer width="100%" height={260}>
-                    <LineChart data={data} margin={{ top: 10, right: 14, left: 8, bottom: 6 }}>
-                      <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.06)" />
+                    <LineChart
+                      data={data}
+                      margin={{ top: 10, right: 14, left: 8, bottom: 6 }}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 6"
+                        stroke="rgba(255,255,255,0.06)"
+                      />
+
                       <XAxis
                         dataKey="label"
-                        tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.75)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={{ stroke: "rgba(255,255,255,0.18)" }}
                       />
+
                       <YAxis
-                        tick={{ fill: "rgba(255,255,255,0.70)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.70)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={false}
                       />
-                      <Tooltip content={<CustomTooltip mode="attended" />} cursor={<SubtleCursor />} />
-                      <Legend wrapperStyle={{ color: "rgba(255,255,255,0.70)" }} />
+
+                      <Tooltip
+                        content={<CustomTooltip mode="attended" />}
+                        cursor={<SubtleCursor />}
+                      />
+
+                      <Legend
+                        wrapperStyle={{ color: "rgba(255,255,255,0.70)" }}
+                      />
+
                       <Line
                         type="monotone"
                         dataKey="attendedAshdod"
@@ -662,6 +774,7 @@ export default function Report4() {
                         dot={{ r: 4, strokeWidth: 2, fill: "#e5f0ff" }}
                         connectNulls
                       />
+
                       <Line
                         type="monotone"
                         dataKey="attendedBeer"
@@ -680,25 +793,63 @@ export default function Report4() {
                 <div className="mb-2 text-sm font-semibold text-white/90">
                   עמודות – נרשמו/הוזמנו לפי חודש
                 </div>
+
                 <div className="rounded-2xl bg-white/6 p-3 ring-1 ring-white/5">
                   <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={data} margin={{ top: 10, right: 14, left: 8, bottom: 6 }} barCategoryGap="18%" barGap={6}>
-                      <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.06)" />
+                    <BarChart
+                      data={data}
+                      margin={{ top: 10, right: 14, left: 8, bottom: 6 }}
+                      barCategoryGap="18%"
+                      barGap={6}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 6"
+                        stroke="rgba(255,255,255,0.06)"
+                      />
+
                       <XAxis
                         dataKey="label"
-                        tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.75)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={{ stroke: "rgba(255,255,255,0.18)" }}
                       />
+
                       <YAxis
-                        tick={{ fill: "rgba(255,255,255,0.70)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.70)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={false}
                       />
-                      <Tooltip content={<CustomTooltip mode="invited" />} cursor={<SubtleCursor />} />
-                      <Legend wrapperStyle={{ color: "rgba(255,255,255,0.70)" }} />
-                      <Bar dataKey="invitedAshdod" name="אשדוד" fill="rgba(96,165,250,0.85)" radius={[8, 8, 0, 0]} barSize={22} />
-                      <Bar dataKey="invitedBeer" name="באר שבע" fill="rgba(148,163,184,0.55)" radius={[8, 8, 0, 0]} barSize={22} />
+
+                      <Tooltip
+                        content={<CustomTooltip mode="invited" />}
+                        cursor={<SubtleCursor />}
+                      />
+
+                      <Legend
+                        wrapperStyle={{ color: "rgba(255,255,255,0.70)" }}
+                      />
+
+                      <Bar
+                        dataKey="invitedAshdod"
+                        name="אשדוד"
+                        fill="rgba(96,165,250,0.85)"
+                        radius={[8, 8, 0, 0]}
+                        barSize={22}
+                      />
+
+                      <Bar
+                        dataKey="invitedBeer"
+                        name="באר שבע"
+                        fill="rgba(148,163,184,0.55)"
+                        radius={[8, 8, 0, 0]}
+                        barSize={22}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -708,25 +859,63 @@ export default function Report4() {
                 <div className="mb-2 text-sm font-semibold text-white/90">
                   עמודות – הגיעו בפועל לפי חודש
                 </div>
+
                 <div className="rounded-2xl bg-white/6 p-3 ring-1 ring-white/5">
                   <ResponsiveContainer width="100%" height={260}>
-                    <BarChart data={data} margin={{ top: 10, right: 14, left: 8, bottom: 6 }} barCategoryGap="18%" barGap={6}>
-                      <CartesianGrid strokeDasharray="3 6" stroke="rgba(255,255,255,0.06)" />
+                    <BarChart
+                      data={data}
+                      margin={{ top: 10, right: 14, left: 8, bottom: 6 }}
+                      barCategoryGap="18%"
+                      barGap={6}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 6"
+                        stroke="rgba(255,255,255,0.06)"
+                      />
+
                       <XAxis
                         dataKey="label"
-                        tick={{ fill: "rgba(255,255,255,0.75)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.75)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={{ stroke: "rgba(255,255,255,0.18)" }}
                       />
+
                       <YAxis
-                        tick={{ fill: "rgba(255,255,255,0.70)", fontSize: 12 }}
+                        tick={{
+                          fill: "rgba(255,255,255,0.70)",
+                          fontSize: 12,
+                        }}
                         tickLine={false}
                         axisLine={false}
                       />
-                      <Tooltip content={<CustomTooltip mode="attended" />} cursor={<SubtleCursor />} />
-                      <Legend wrapperStyle={{ color: "rgba(255,255,255,0.70)" }} />
-                      <Bar dataKey="attendedAshdod" name="אשדוד" fill="rgba(96,165,250,0.85)" radius={[8, 8, 0, 0]} barSize={22} />
-                      <Bar dataKey="attendedBeer" name="באר שבע" fill="rgba(148,163,184,0.55)" radius={[8, 8, 0, 0]} barSize={22} />
+
+                      <Tooltip
+                        content={<CustomTooltip mode="attended" />}
+                        cursor={<SubtleCursor />}
+                      />
+
+                      <Legend
+                        wrapperStyle={{ color: "rgba(255,255,255,0.70)" }}
+                      />
+
+                      <Bar
+                        dataKey="attendedAshdod"
+                        name="אשדוד"
+                        fill="rgba(96,165,250,0.85)"
+                        radius={[8, 8, 0, 0]}
+                        barSize={22}
+                      />
+
+                      <Bar
+                        dataKey="attendedBeer"
+                        name="באר שבע"
+                        fill="rgba(148,163,184,0.55)"
+                        radius={[8, 8, 0, 0]}
+                        barSize={22}
+                      />
                     </BarChart>
                   </ResponsiveContainer>
                 </div>
@@ -739,6 +928,7 @@ export default function Report4() {
                   <IcoPie />
                   <div className="text-lg font-bold">ניתוח פגישות : תוצאות</div>
                 </div>
+
                 <div className="text-xs text-white/60">
                   תוצאות פגישות ייעוץ • חלוקה לפי סטטוס
                 </div>
@@ -746,15 +936,23 @@ export default function Report4() {
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
                 {(campus === "BOTH" || campus === "ASHDOD") && (
-                  <PieCard title="תוצאות פ.הייעוץ – קמפוס אשדוד" data={pieAshdod} />
+                  <PieCard
+                    title="תוצאות פ.הייעוץ – קמפוס אשדוד"
+                    data={pieAshdod}
+                  />
                 )}
+
                 {(campus === "BOTH" || campus === "BEER_SHEVA") && (
-                  <PieCard title="תוצאות פ.הייעוץ – קמפוס באר שבע" data={pieBeer} />
+                  <PieCard
+                    title="תוצאות פ.הייעוץ – קמפוס באר שבע"
+                    data={pieBeer}
+                  />
                 )}
               </div>
 
               <div className="mt-4 text-xs text-white/60">
-                המטרה: לזהות צווארי בקבוק בתהליך הייעוץ ולשפר את איכות הסינון והטיפול.
+                המטרה: לזהות צווארי בקבוק בתהליך הייעוץ ולשפר את איכות הסינון
+                והטיפול.
               </div>
             </div>
           </div>

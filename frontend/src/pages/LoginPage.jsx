@@ -3,7 +3,8 @@ import { useNavigate } from "react-router-dom";
 import { User, Lock, Eye, EyeOff } from "lucide-react";
 import Sidebar from "../components/Sidebar";
 
-const API_BASE_URL =
+
+const BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://188.245.161.194:5000";
 
 export default function LoginPage() {
@@ -11,6 +12,8 @@ export default function LoginPage() {
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
+
   const navigate = useNavigate();
 
   useEffect(() => {
@@ -25,22 +28,37 @@ export default function LoginPage() {
   const handleSubmit = async (e) => {
     e.preventDefault();
 
+    const cleanUsername = username.trim();
+
+    if (!cleanUsername || !password) {
+      alert("נא להזין שם משתמש וסיסמה");
+      return;
+    }
+
     try {
-      const res = await fetch(`${API_BASE_URL}/api/auth/login`, {
+      setLoading(true);
+
+      const res = await fetch(`${BASE_URL}/api/auth/login`, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
         body: JSON.stringify({
-          username,
+          username: cleanUsername,
           password,
         }),
       });
 
-      const data = await res.json();
+      let data = null;
+
+      try {
+        data = await res.json();
+      } catch (error) {
+        data = null;
+      }
 
       if (!res.ok) {
-        alert(data.message || "התחברות נכשלה");
+        alert(data?.message || "התחברות נכשלה");
         return;
       }
 
@@ -53,8 +71,9 @@ export default function LoginPage() {
           fullName: data.fullName,
         })
       );
+
       localStorage.setItem("token", data.token);
-      localStorage.setItem("loggedInUsername", data.username || username);
+      localStorage.setItem("loggedInUsername", data.username || cleanUsername);
       localStorage.setItem("loggedInEmail", data.email || "");
       localStorage.setItem("loggedInRole", data.role || "");
 
@@ -62,6 +81,8 @@ export default function LoginPage() {
     } catch (error) {
       console.error("Login error:", error);
       alert("שגיאה בחיבור לשרת");
+    } finally {
+      setLoading(false);
     }
   };
 
@@ -82,7 +103,7 @@ export default function LoginPage() {
 
       <div className="relative z-10 mx-auto max-w-7xl px-6 pt-6 pb-10">
         <div className="grid grid-cols-3 items-start">
-          <div className="justify-self-start"></div>
+          <div className="justify-self-start" />
 
           <div className="justify-self-center text-center">
             <div className="mx-auto inline-flex items-center justify-center rounded-2xl bg-white px-5 py-3 shadow-sm ring-1 ring-black/10">
@@ -95,6 +116,7 @@ export default function LoginPage() {
                 }}
               />
             </div>
+
             <div className="mt-2 text-[12px] text-white/75">
               המכללה האקדמית להנדסה ע״ש סמי שמעון
             </div>
@@ -122,14 +144,18 @@ export default function LoginPage() {
                   <label className="mb-2 block text-sm font-semibold text-white/90">
                     שם משתמש
                   </label>
+
                   <div className="relative">
                     <input
                       type="text"
                       value={username}
                       onChange={(e) => setUsername(e.target.value)}
                       placeholder="הזן שם משתמש"
-                      className="w-full rounded-2xl bg-white/10 px-5 py-4 pr-12 text-white placeholder:text-white/35 outline-none ring-white/8 transition focus:ring-2 focus:ring-white/20"
+                      autoComplete="username"
+                      disabled={loading}
+                      className="w-full rounded-2xl bg-white/10 px-5 py-4 pr-12 text-white placeholder:text-white/35 outline-none ring-white/8 transition focus:ring-2 focus:ring-white/20 disabled:opacity-70"
                     />
+
                     <User className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45" />
                   </div>
                 </div>
@@ -138,19 +164,26 @@ export default function LoginPage() {
                   <label className="mb-2 block text-sm font-semibold text-white/90">
                     סיסמה
                   </label>
+
                   <div className="relative">
                     <input
                       type={showPassword ? "text" : "password"}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       placeholder="הזן סיסמה"
-                      className="w-full rounded-2xl bg-white/10 px-5 py-4 pr-12 pl-12 text-white placeholder:text-white/35 outline-none ring-white/8 transition focus:ring-2 focus:ring-white/20"
+                      autoComplete="current-password"
+                      disabled={loading}
+                      className="w-full rounded-2xl bg-white/10 px-5 py-4 pr-12 pl-12 text-white placeholder:text-white/35 outline-none ring-white/8 transition focus:ring-2 focus:ring-white/20 disabled:opacity-70"
                     />
+
                     <Lock className="absolute right-4 top-1/2 h-5 w-5 -translate-y-1/2 text-white/45" />
+
                     <button
                       type="button"
                       onClick={() => setShowPassword((prev) => !prev)}
-                      className="absolute left-4 top-1/2 -translate-y-1/2 text-white/45 hover:text-white/80"
+                      disabled={loading}
+                      className="absolute left-4 top-1/2 -translate-y-1/2 text-white/45 hover:text-white/80 disabled:opacity-60"
+                      aria-label={showPassword ? "הסתר סיסמה" : "הצג סיסמה"}
                     >
                       {showPassword ? (
                         <EyeOff className="h-5 w-5" />
@@ -163,6 +196,7 @@ export default function LoginPage() {
 
                 <button
                   type="submit"
+                  disabled={loading}
                   className="w-full rounded-2xl px-4 py-4 text-lg font-bold text-white transition-all duration-300
                   bg-gradient-to-l from-[#5a6072] via-[#4f5567] to-[#444958]
                   shadow-[0_10px_30px_rgba(0,0,0,0.22)]
@@ -170,9 +204,10 @@ export default function LoginPage() {
                   hover:from-[#6b7287] hover:via-[#596077] hover:to-[#4d5366]
                   hover:shadow-[0_16px_38px_rgba(0,0,0,0.30)]
                   hover:-translate-y-[1px]
-                  active:translate-y-0"
+                  active:translate-y-0
+                  disabled:opacity-70 disabled:hover:translate-y-0"
                 >
-                  כניסה לאזור האישי
+                  {loading ? "מתחבר..." : "כניסה לאזור האישי"}
                 </button>
               </form>
 

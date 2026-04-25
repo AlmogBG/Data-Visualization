@@ -114,7 +114,11 @@ function buildMock(campusKey, departmentKey) {
         idx * 77 + campusKey.length * 13 + departmentKey.length * 19;
       const base = genRandomValue(seed, 40, 240);
       const value = Math.round(base * campusFactor * depFactor);
-      return { town, count: value };
+
+      return {
+        town,
+        count: value,
+      };
     })
     .sort((a, b) => b.count - a.count);
 }
@@ -296,16 +300,23 @@ export default function Report3() {
           `${API_BASE_URL}/api/stats/cities?${params.toString()}`
         );
 
-        if (!res.ok) throw new Error("API not ready");
+        if (!res.ok) {
+          throw new Error("API not ready");
+        }
 
         const json = await res.json();
-        if (!Array.isArray(json)) throw new Error("Bad API shape");
+
+        if (!Array.isArray(json)) {
+          throw new Error("Bad API shape");
+        }
 
         if (!cancelled) {
           setData(json);
           setApiMode("api");
         }
       } catch (error) {
+        console.error("Report3 API error:", error);
+
         const mock = buildMock(campus, department);
 
         if (!cancelled) {
@@ -377,13 +388,16 @@ export default function Report3() {
             <span className="mx-2 font-semibold">
               {apiMode === "api" ? "API" : "MOCK"}
             </span>
-            {loading ? <span className="mr-2 text-white/60">(טוען...)</span> : null}
+            {loading ? (
+              <span className="mr-2 text-white/60">(טוען...)</span>
+            ) : null}
           </p>
         </div>
 
         <div className="mt-6 flex flex-col items-center justify-between gap-4 lg:flex-row">
           <div className="flex flex-wrap items-center gap-3">
             <div className="text-sm text-white/80">קמפוס</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={campus}
@@ -397,6 +411,7 @@ export default function Report3() {
             </select>
 
             <div className="text-sm text-white/80">מחלקה</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={department}
@@ -410,6 +425,7 @@ export default function Report3() {
             </select>
 
             <div className="text-sm text-white/80">אזור</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={area}
@@ -423,6 +439,7 @@ export default function Report3() {
             </select>
 
             <div className="text-sm text-white/80">הצג</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={topN}
@@ -529,7 +546,7 @@ export default function Report3() {
               <SeriesLegend primaryLabel={primarySeriesLabel} />
             </div>
 
-            <div className="mt-3 text-xs text-slate-200/70"></div>
+            <div className="mt-3 text-xs text-slate-200/70" />
           </div>
 
           <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
@@ -553,7 +570,7 @@ export default function Report3() {
               />
             </div>
 
-            <div className="mt-3 text-xs text-slate-200/70"></div>
+            <div className="mt-3 text-xs text-slate-200/70" />
           </div>
         </div>
       </div>

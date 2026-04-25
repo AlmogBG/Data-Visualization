@@ -49,6 +49,7 @@ function genRandomValue(seed, min, max) {
 
 function getMonthsLabel(selectedMonths) {
   if (selectedMonths.includes("ALL")) return "כל החודשים";
+
   const map = new Map(months.map((m) => [m.key, m.label]));
   return selectedMonths.map((k) => map.get(k)).join(", ");
 }
@@ -114,13 +115,16 @@ function CustomTooltip({ active, payload, label }) {
   return (
     <div className="rounded-xl border border-slate-700/40 bg-slate-950/90 p-3 text-slate-100 shadow-lg">
       <div className="mb-1 font-bold">{label}</div>
+
       <div className="text-sm text-slate-200">
         נבחר (מצטבר): <span className="font-semibold">{fmtInt(selected)}</span>
       </div>
+
       <div className="text-sm text-slate-200">
         להשוואה (מצטבר):{" "}
         <span className="font-semibold">{fmtInt(compare)}</span>
       </div>
+
       <div className={`mt-1 text-sm ${deltaColor}`}>
         שינוי: <span className="font-semibold">{fmtInt(delta)}</span> (
         {fmtPct(deltaPct)})
@@ -197,7 +201,13 @@ export default function Report1() {
           setApiMode("api");
         }
       } catch (error) {
-        const mock = buildMockCumulativeData({ yearA, yearB, selectedMonths });
+        console.error("Report1 API error:", error);
+
+        const mock = buildMockCumulativeData({
+          yearA,
+          yearB,
+          selectedMonths,
+        });
 
         if (!cancelled) {
           setChartData(mock);
@@ -260,6 +270,7 @@ export default function Report1() {
           <h1 className="text-3xl font-extrabold tracking-tight">
             📈 דוח 1 - השוואת נרשמים לפי חודשים / שנים
           </h1>
+
           <p className="mt-2 text-sm text-white/75">
             השוואה: <span className="font-semibold">{yearB}</span> מול{" "}
             <span className="font-semibold">{yearA}</span> | חודשים:{" "}
@@ -274,6 +285,7 @@ export default function Report1() {
         <div className="mt-6 flex flex-col items-center justify-between gap-4 lg:flex-row">
           <div className="flex items-center gap-3">
             <div className="text-sm text-white/80">שנה</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={yearB}
@@ -285,6 +297,7 @@ export default function Report1() {
             </select>
 
             <div className="text-sm text-white/80">בהשוואה ל-</div>
+
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={yearA}
@@ -363,12 +376,15 @@ export default function Report1() {
                           <td className="px-4 py-3 font-medium text-slate-50">
                             {r.month}
                           </td>
+
                           <td className="px-4 py-3 text-left text-slate-100">
                             {fmtInt(r.selected)}
                           </td>
+
                           <td className="px-4 py-3 text-left text-slate-100">
                             {fmtInt(r.compare)}
                           </td>
+
                           <td
                             className={`px-4 py-3 text-left font-semibold ${pctColor}`}
                           >
