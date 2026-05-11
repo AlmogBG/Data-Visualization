@@ -14,26 +14,13 @@ import Sidebar from "../components/Sidebar";
 import ResidenceMap from "../components/ResidenceMap";
 import TopNavbar from "../components/TopNavbar";
 
-// ----- API -----
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://188.245.161.194:5000";
 
-// ----- Options -----
 const campuses = [
   { key: "ALL", label: "כל הקמפוסים" },
   { key: "ASHDOD", label: "אשדוד" },
   { key: "BEER_SHEVA", label: "באר שבע" },
-];
-
-const departments = [
-  "ALL",
-  "הנדסת תוכנה",
-  "מדעי המחשב",
-  "הנדסת בניין",
-  "הנדסת מכונות",
-  "הנדסת תעשייה וניהול",
-  "הנדסת חשמל",
-  "תקשורת חזותית",
 ];
 
 const areas = [
@@ -43,89 +30,8 @@ const areas = [
   { key: "NORTH", label: "צפון" },
 ];
 
-const townToArea = {
-  "באר שבע": "SOUTH",
-  "אשדוד": "SOUTH",
-  "אשקלון": "SOUTH",
-  "קריית גת": "SOUTH",
-  "קריית מלאכי": "SOUTH",
+const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(Number(n) || 0);
 
-  יבנה: "CENTER",
-  "גן יבנה": "CENTER",
-  רחובות: "CENTER",
-  "ראשון לציון": "CENTER",
-  "נס ציונה": "CENTER",
-  חולון: "CENTER",
-  "בת ים": "CENTER",
-  רמלה: "CENTER",
-  לוד: "CENTER",
-  "תל אביב": "CENTER",
-
-  נהריה: "NORTH",
-};
-
-const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(n);
-
-const townsPool = [
-  "אשדוד",
-  "אשקלון",
-  "באר שבע",
-  "גן יבנה",
-  "יבנה",
-  "רחובות",
-  "ראשון לציון",
-  "נס ציונה",
-  "קריית גת",
-  "קריית מלאכי",
-  "תל אביב",
-  "חולון",
-  "בת ים",
-  "רמלה",
-  "לוד",
-  "נהריה",
-];
-
-function seededRand(seed) {
-  const x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
-}
-
-function genRandomValue(seed, min, max) {
-  const r = seededRand(seed);
-  return Math.floor(min + r * (max - min + 1));
-}
-
-function buildMock(campusKey, departmentKey) {
-  const campusFactor =
-    campusKey === "ALL" ? 1.0 : campusKey === "ASHDOD" ? 1.1 : 0.95;
-
-  const depFactor =
-    departmentKey === "ALL"
-      ? 1.0
-      : departmentKey === "הנדסת תוכנה"
-      ? 1.25
-      : departmentKey === "מדעי המחשב"
-      ? 1.15
-      : 1.0;
-
-  return townsPool
-    .map((town, idx) => {
-      const seed =
-        idx * 77 + campusKey.length * 13 + departmentKey.length * 19;
-      const base = genRandomValue(seed, 40, 240);
-      const value = Math.round(base * campusFactor * depFactor);
-
-      return {
-        town,
-        count: value,
-      };
-    })
-    .sort((a, b) => b.count - a.count);
-}
-
-/* =========================
-   Icons
-   ========================= */
 function MiniIcon({ children, className = "", size = "h-5 w-5" }) {
   return (
     <svg
@@ -199,9 +105,6 @@ function IcoFilter() {
   );
 }
 
-/* =========================
-   Chart helpers
-   ========================= */
 function CustomXAxisTick({ x, y, payload }) {
   const text = payload?.value ?? "";
   const words = String(text).split(" ");
@@ -213,12 +116,12 @@ function CustomXAxisTick({ x, y, payload }) {
 
   return (
     <g transform={`translate(${x},${y})`}>
-      {lines.map((line, i) => (
+      {lines.map((line, index) => (
         <text
-          key={i}
+          key={index}
           x={0}
           y={0}
-          dy={16 + i * 14}
+          dy={16 + index * 14}
           textAnchor="middle"
           fill="rgba(255,255,255,0.82)"
           fontSize={12}
@@ -232,7 +135,7 @@ function CustomXAxisTick({ x, y, payload }) {
 }
 
 function SimpleCityTooltip({ active, payload, label }) {
-  if (!active || !payload || !payload.length) return null;
+  if (!active || !payload?.length) return null;
 
   const value = payload[0]?.value ?? 0;
 
@@ -267,9 +170,13 @@ export default function Report3() {
   const [area, setArea] = useState("ALL");
   const [topN, setTopN] = useState(10);
 
+  const [departments, setDepartments] = useState([]);
   const [data, setData] = useState([]);
+
   const [loading, setLoading] = useState(false);
-  const [apiMode, setApiMode] = useState("mock");
+  const [optionsLoading, setOptionsLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
+
   const [activeTown, setActiveTown] = useState(null);
   const [hoveredTown, setHoveredTown] = useState(null);
 
@@ -287,10 +194,59 @@ export default function Report3() {
   useEffect(() => {
     let cancelled = false;
 
-    async function load() {
-      setLoading(true);
-
+    async function loadOptions() {
       try {
+        setOptionsLoading(true);
+
+        const res = await fetch(`${API_BASE_URL}/api/form/options`);
+
+        let json = null;
+
+        try {
+          json = await res.json();
+        } catch {
+          json = null;
+        }
+
+        if (!res.ok) {
+          throw new Error(json?.message || "שגיאה בטעינת אפשרויות הסינון");
+        }
+
+        const departmentRows = Array.isArray(json?.departments)
+          ? json.departments
+          : [];
+
+        if (!cancelled) {
+          setDepartments(departmentRows);
+        }
+      } catch (error) {
+        console.error("Report3 options load error:", error);
+
+        if (!cancelled) {
+          setDepartments([]);
+        }
+      } finally {
+        if (!cancelled) {
+          setOptionsLoading(false);
+        }
+      }
+    }
+
+    loadOptions();
+
+    return () => {
+      cancelled = true;
+    };
+  }, []);
+
+  useEffect(() => {
+    let cancelled = false;
+
+    async function loadCities() {
+      try {
+        setLoading(true);
+        setErrorMessage("");
+
         const params = new URLSearchParams();
         params.set("campus", campus);
         params.set("department", department);
@@ -300,28 +256,33 @@ export default function Report3() {
           `${API_BASE_URL}/api/stats/cities?${params.toString()}`
         );
 
-        if (!res.ok) {
-          throw new Error("API not ready");
+        let json = null;
+
+        try {
+          json = await res.json();
+        } catch {
+          json = null;
         }
 
-        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json?.message || "שגיאה בטעינת נתוני דוח 3");
+        }
 
         if (!Array.isArray(json)) {
-          throw new Error("Bad API shape");
+          throw new Error("מבנה הנתונים שהתקבל מהשרת אינו תקין");
         }
 
         if (!cancelled) {
           setData(json);
-          setApiMode("api");
         }
       } catch (error) {
-        console.error("Report3 API error:", error);
-
-        const mock = buildMock(campus, department);
+        console.error("Report3 load error:", error);
 
         if (!cancelled) {
-          setData(mock);
-          setApiMode("mock");
+          setData([]);
+          setErrorMessage(
+            error.message || "לא ניתן לטעון את נתוני הדוח כרגע"
+          );
         }
       } finally {
         if (!cancelled) {
@@ -330,24 +291,18 @@ export default function Report3() {
       }
     }
 
-    load();
+    loadCities();
 
     return () => {
       cancelled = true;
     };
   }, [campus, department, area]);
 
-  const filteredData = useMemo(() => {
-    return area === "ALL"
-      ? data
-      : data.filter((row) => (row.region || townToArea[row.town]) === area);
-  }, [data, area]);
-
   const visibleRows = useMemo(() => {
-    return [...filteredData]
-      .sort((a, b) => (b.count ?? 0) - (a.count ?? 0))
+    return [...data]
+      .sort((a, b) => (Number(b.count) || 0) - (Number(a.count) || 0))
       .slice(0, topN);
-  }, [filteredData, topN]);
+  }, [data, topN]);
 
   useEffect(() => {
     if (!visibleRows.some((row) => row.town === activeTown)) {
@@ -358,16 +313,19 @@ export default function Report3() {
   const chartData = useMemo(() => {
     return visibleRows.map((row) => ({
       town: row.town,
-      selectedValue: row.count,
+      selectedValue: Number(row.count) || 0,
+      region: row.region,
     }));
   }, [visibleRows]);
 
   const campusLabel =
-    campuses.find((c) => c.key === campus)?.label ?? "כל הקמפוסים";
-  const areaLabel = areas.find((a) => a.key === area)?.label ?? "בחר הכל";
+    campuses.find((item) => item.key === campus)?.label ?? "כל הקמפוסים";
+  const areaLabel = areas.find((item) => item.key === area)?.label ?? "בחר הכל";
   const departmentLabel = department === "ALL" ? "כל המחלקות" : department;
 
   const primarySeriesLabel = `נרשמים • ${campusLabel} • ${departmentLabel} • ${areaLabel}`;
+
+  const hasData = chartData.length > 0;
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
@@ -384,10 +342,7 @@ export default function Report3() {
           </div>
 
           <p className="mt-2 text-sm text-white/75">
-            המפה והגרף נשענים על אותם נתונים מסוננים בדיוק
-            <span className="mx-2 font-semibold">
-              {apiMode === "api" ? "API" : "MOCK"}
-            </span>
+            המפה והגרף נשענים על נתונים מה־Backend בלבד
             {loading ? (
               <span className="mr-2 text-white/60">(טוען...)</span>
             ) : null}
@@ -403,9 +358,9 @@ export default function Report3() {
               value={campus}
               onChange={(e) => setCampus(e.target.value)}
             >
-              {campuses.map((c) => (
-                <option key={c.key} value={c.key}>
-                  {c.label}
+              {campuses.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -416,10 +371,12 @@ export default function Report3() {
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={department}
               onChange={(e) => setDepartment(e.target.value)}
+              disabled={optionsLoading}
             >
-              {departments.map((d) => (
-                <option key={d} value={d}>
-                  {d === "ALL" ? "כל המחלקות" : d}
+              <option value="ALL">כל המחלקות</option>
+              {departments.map((item) => (
+                <option key={item.id} value={item.name}>
+                  {item.name}
                 </option>
               ))}
             </select>
@@ -431,9 +388,9 @@ export default function Report3() {
               value={area}
               onChange={(e) => setArea(e.target.value)}
             >
-              {areas.map((a) => (
-                <option key={a.key} value={a.key}>
-                  {a.label}
+              {areas.map((item) => (
+                <option key={item.key} value={item.key}>
+                  {item.label}
                 </option>
               ))}
             </select>
@@ -459,120 +416,125 @@ export default function Report3() {
           </div>
         </div>
 
-        <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
-          <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <IcoChart />
-                <div className="text-lg font-bold">נרשמים לפי עיר</div>
+        {errorMessage ? (
+          <div className="mt-8 rounded-2xl border border-rose-300/20 bg-rose-500/10 p-5 text-center text-sm text-rose-100">
+            {errorMessage}
+          </div>
+        ) : null}
+
+        {!loading && !errorMessage && !hasData ? (
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-sm text-white/75">
+            אין נתונים להצגה עבור הסינון שנבחר.
+          </div>
+        ) : null}
+
+        {hasData ? (
+          <div className="mt-8 grid grid-cols-1 gap-6 xl:grid-cols-2">
+            <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <IcoChart />
+                  <div className="text-lg font-bold">נרשמים לפי עיר</div>
+                </div>
+
+                <div className="text-xs text-white/60">גרף עם סדרה אחת</div>
               </div>
 
-              <div className="text-xs text-white/60">גרף עם סדרה אחת</div>
-            </div>
-
-            <div className="rounded-[24px] bg-[#2f3340] px-4 pt-5 pb-4 ring-1 ring-white/10">
-              <ResponsiveContainer width="100%" height={560}>
-                <BarChart
-                  data={chartData}
-                  margin={{ top: 22, right: 18, left: 22, bottom: 34 }}
-                  barCategoryGap="22%"
-                  barGap={12}
-                  onMouseMove={(state) => {
-                    setHoveredTown(state?.activeLabel || null);
-                  }}
-                  onMouseLeave={() => {
-                    setHoveredTown(null);
-                  }}
-                  onClick={(state) => {
-                    const clickedTown = state?.activeLabel;
-                    if (clickedTown) {
-                      setActiveTown(clickedTown);
-                    }
-                  }}
-                >
-                  <CartesianGrid
-                    strokeDasharray="3 3"
-                    stroke="rgba(255,255,255,0.07)"
-                  />
-
-                  <XAxis
-                    dataKey="town"
-                    interval={0}
-                    height={74}
-                    tick={<CustomXAxisTick />}
-                    tickLine={false}
-                    axisLine={{ stroke: "rgba(255,255,255,0.16)" }}
-                  />
-
-                  <YAxis
-                    width={8}
-                    tick={{ fill: "rgba(255,255,255,0.72)", fontSize: 12 }}
-                    tickMargin={10}
-                    tickLine={false}
-                    axisLine={false}
-                  />
-
-                  <Tooltip content={<SimpleCityTooltip />} cursor={false} />
-
-                  <Bar
-                    dataKey="selectedValue"
-                    name={primarySeriesLabel}
-                    radius={[8, 8, 0, 0]}
-                    barSize={22}
-                  >
-                    {chartData.map((entry) => {
-                      const isHovered = entry.town === hoveredTown;
-                      const isActive = entry.town === activeTown;
-
-                      let fill = "rgba(96,165,250,0.90)";
-
-                      if (isHovered) {
-                        fill = "#8fc1ff";
-                      } else if (isActive) {
-                        fill = "#b7d7ff";
+              <div className="rounded-[24px] bg-[#2f3340] px-4 pt-5 pb-4 ring-1 ring-white/10">
+                <ResponsiveContainer width="100%" height={560}>
+                  <BarChart
+                    data={chartData}
+                    margin={{ top: 22, right: 18, left: 22, bottom: 34 }}
+                    barCategoryGap="22%"
+                    barGap={12}
+                    onMouseMove={(state) => {
+                      setHoveredTown(state?.activeLabel || null);
+                    }}
+                    onMouseLeave={() => {
+                      setHoveredTown(null);
+                    }}
+                    onClick={(state) => {
+                      const clickedTown = state?.activeLabel;
+                      if (clickedTown) {
+                        setActiveTown(clickedTown);
                       }
+                    }}
+                  >
+                    <CartesianGrid
+                      strokeDasharray="3 3"
+                      stroke="rgba(255,255,255,0.07)"
+                    />
 
-                      return (
-                        <Cell
-                          key={`selected-${entry.town}`}
-                          fill={fill}
-                        />
-                      );
-                    })}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+                    <XAxis
+                      dataKey="town"
+                      interval={0}
+                      height={74}
+                      tick={<CustomXAxisTick />}
+                      tickLine={false}
+                      axisLine={{ stroke: "rgba(255,255,255,0.16)" }}
+                    />
 
-              <SeriesLegend primaryLabel={primarySeriesLabel} />
+                    <YAxis
+                      width={8}
+                      tick={{ fill: "rgba(255,255,255,0.72)", fontSize: 12 }}
+                      tickMargin={10}
+                      tickLine={false}
+                      axisLine={false}
+                    />
+
+                    <Tooltip content={<SimpleCityTooltip />} cursor={false} />
+
+                    <Bar
+                      dataKey="selectedValue"
+                      name={primarySeriesLabel}
+                      radius={[8, 8, 0, 0]}
+                      barSize={22}
+                    >
+                      {chartData.map((entry) => {
+                        const isHovered = entry.town === hoveredTown;
+                        const isActive = entry.town === activeTown;
+
+                        let fill = "rgba(96,165,250,0.90)";
+
+                        if (isHovered) {
+                          fill = "#8fc1ff";
+                        } else if (isActive) {
+                          fill = "#b7d7ff";
+                        }
+
+                        return <Cell key={entry.town} fill={fill} />;
+                      })}
+                    </Bar>
+                  </BarChart>
+                </ResponsiveContainer>
+
+                <SeriesLegend primaryLabel={primarySeriesLabel} />
+              </div>
             </div>
 
-            <div className="mt-3 text-xs text-slate-200/70" />
-          </div>
+            <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
+              <div className="mb-4 flex items-center justify-between gap-3">
+                <div className="flex items-center gap-2">
+                  <IcoMap />
+                  <div className="text-lg font-bold">מפת מגורי נרשמים</div>
+                </div>
 
-          <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
-            <div className="mb-4 flex items-center justify-between gap-3">
-              <div className="flex items-center gap-2">
-                <IcoMap />
-                <div className="text-lg font-bold">מפת מגורי נרשמים</div>
+                <div className="text-xs text-white/60">
+                  {visibleRows.length} יישובים מוצגים
+                </div>
               </div>
 
-              <div className="text-xs text-white/60">
-                {visibleRows.length} יישובים מוצגים
+              <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/5 backdrop-blur-sm">
+                <ResidenceMap
+                  points={visibleRows}
+                  activeTown={activeTown}
+                  onSelectTown={setActiveTown}
+                  googleMapsApiKey={googleMapsApiKey}
+                />
               </div>
             </div>
-
-            <div className="rounded-2xl bg-white/5 p-4 ring-1 ring-white/5 backdrop-blur-sm">
-              <ResidenceMap
-                points={visibleRows}
-                activeTown={activeTown}
-                onSelectTown={setActiveTown}
-                googleMapsApiKey={googleMapsApiKey}
-              />
-            </div>
-
-            <div className="mt-3 text-xs text-slate-200/70" />
           </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );

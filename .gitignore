@@ -3,6 +3,4 @@
 .env.*
 node_modules/
 Backend/node_modules/
-frontend/node_modules/*.dump
-backup.dump
-backup_copy.dump
+frontend/build/

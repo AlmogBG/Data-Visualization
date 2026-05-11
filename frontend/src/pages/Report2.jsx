@@ -16,16 +16,6 @@ import TopNavbar from "../components/TopNavbar";
 const API_BASE_URL =
   process.env.REACT_APP_API_BASE_URL || "http://188.245.161.194:5000";
 
-const departments = [
-  "הנדסת תוכנה",
-  "מדעי המחשב",
-  "הנדסת בניין",
-  "הנדסת מכונות",
-  "הנדסת תעשייה וניהול",
-  "הנדסת חשמל",
-  "תקשורת חזותית",
-];
-
 const months = [
   { key: "ALL", label: "בחר הכל" },
   { key: "01", label: "ינו" },
@@ -42,121 +32,30 @@ const months = [
   { key: "12", label: "דצמ" },
 ];
 
-const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(n);
-const calcDelta = (curr, prev) => curr - prev;
-const calcDeltaPct = (curr, prev) =>
-  prev === 0 ? 0 : ((curr - prev) / prev) * 100;
-const fmtPct = (n) => `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
+const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(Number(n) || 0);
 
-function seededRand(seed) {
-  let x = Math.sin(seed) * 10000;
-  return x - Math.floor(x);
+function calcDelta(curr, prev) {
+  return (Number(curr) || 0) - (Number(prev) || 0);
 }
 
-function genRandomValue(seed, min, max) {
-  const r = seededRand(seed);
-  return Math.floor(min + r * (max - min + 1));
+function calcDeltaPct(curr, prev) {
+  const current = Number(curr) || 0;
+  const previous = Number(prev) || 0;
+
+  if (previous === 0) return 0;
+
+  return ((current - previous) / previous) * 100;
+}
+
+function fmtPct(n) {
+  return `${n > 0 ? "+" : ""}${n.toFixed(1)}%`;
 }
 
 function getMonthsLabel(selectedMonths) {
   if (selectedMonths.includes("ALL")) return "כל החודשים";
 
   const map = new Map(months.map((m) => [m.key, m.label]));
-  return selectedMonths.map((k) => map.get(k)).join(", ");
-}
-
-function MiniIcon({ children, className = "", size = "h-4 w-4" }) {
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`${size} ${className}`}
-      fill="none"
-      aria-hidden="true"
-    >
-      {children}
-    </svg>
-  );
-}
-
-function IcoTitle() {
-  return (
-    <MiniIcon
-      size="h-8 w-8"
-      className="text-white/65 shrink-0 translate-y-[2px]"
-    >
-      <path
-        d="M4 19V5m0 14h16"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-      <path
-        d="M8 15V9m4 6V7m4 8v-5"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </MiniIcon>
-  );
-}
-
-function IcoTable() {
-  return (
-    <MiniIcon className="text-white/55">
-      <path
-        d="M4 6h16v12H4V6Z"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinejoin="round"
-      />
-      <path d="M4 10h16" stroke="currentColor" strokeWidth="2" />
-      <path d="M10 6v12" stroke="currentColor" strokeWidth="2" />
-      <path d="M15 6v12" stroke="currentColor" strokeWidth="2" />
-    </MiniIcon>
-  );
-}
-
-function IcoChart() {
-  return (
-    <MiniIcon className="text-white/55">
-      <path
-        d="M6 20V10M12 20V4M18 20V14"
-        stroke="currentColor"
-        strokeWidth="2"
-        strokeLinecap="round"
-      />
-    </MiniIcon>
-  );
-}
-
-function TrendArrow({ dir }) {
-  if (dir === "neutral") return null;
-
-  const isUp = dir === "up";
-
-  return (
-    <svg
-      viewBox="0 0 24 24"
-      className={`h-5 w-5 ${isUp ? "text-emerald-300" : "text-rose-300"}`}
-      fill="currentColor"
-      aria-hidden="true"
-    >
-      {isUp ? (
-        <path d="M12 5l8 14H4l8-14Z" />
-      ) : (
-        <path d="M12 19 4 5h16l-8 14Z" />
-      )}
-    </svg>
-  );
-}
-
-function buildTableHeader(year, monthsLabel) {
-  return (
-    <div className="flex flex-col leading-tight">
-      <span>{year}</span>
-      <span className="text-[11px] text-white/70">{monthsLabel}</span>
-    </div>
-  );
+  return selectedMonths.map((key) => map.get(key)).filter(Boolean).join(", ");
 }
 
 function CustomTooltip({ active, payload, label, yearA, yearB, monthsLabel }) {
@@ -225,12 +124,12 @@ function CustomXAxisTick({ x, y, payload }) {
 
   return (
     <g transform={`translate(${x},${y})`}>
-      {lines.map((line, i) => (
+      {lines.map((line, index) => (
         <text
-          key={i}
+          key={index}
           x={0}
           y={0}
-          dy={16 + i * 14}
+          dy={16 + index * 14}
           textAnchor="middle"
           fill="rgba(255,255,255,0.80)"
           fontSize={12}
@@ -242,45 +141,6 @@ function CustomXAxisTick({ x, y, payload }) {
   );
 }
 
-function CustomCursor({ x, y, width, height }) {
-  const axisPad = 86;
-  const safeX = (x ?? 0) + axisPad;
-  const safeW = Math.max(0, (width ?? 0) - axisPad);
-
-  return (
-    <rect
-      x={safeX}
-      y={y}
-      width={safeW}
-      height={height}
-      rx={12}
-      ry={12}
-      fill="rgba(255,255,255,0.10)"
-      stroke="rgba(255,255,255,0.22)"
-      strokeWidth={1.5}
-    />
-  );
-}
-
-function buildMockChartData({ yearA, yearB, selectedMonths }) {
-  const useAll = selectedMonths.includes("ALL");
-  const monthFactor = useAll ? 12 : selectedMonths.length;
-
-  return departments.map((dep, idx) => {
-    const seedA = idx * 100 + yearA.length * 17 + monthFactor * 3;
-    const seedB = idx * 100 + yearB.length * 19 + monthFactor * 5;
-
-    const baseA = genRandomValue(seedA, 80, 450) * monthFactor;
-    const baseB = Math.max(0, baseA + genRandomValue(seedB, -120, 160));
-
-    return {
-      department: dep,
-      yearA: baseA,
-      yearB: baseB,
-    };
-  });
-}
-
 export default function Report2() {
   const navigate = useNavigate();
 
@@ -288,9 +148,10 @@ export default function Report2() {
   const [yearA, setYearA] = useState("תשפ״ד");
   const [yearB, setYearB] = useState("תשפ״ה");
   const [selectedMonths, setSelectedMonths] = useState(["ALL"]);
+
   const [chartData, setChartData] = useState([]);
-  const [apiMode, setApiMode] = useState("mock");
   const [loading, setLoading] = useState(false);
+  const [errorMessage, setErrorMessage] = useState("");
 
   const monthsLabel = useMemo(
     () => getMonthsLabel(selectedMonths),
@@ -310,9 +171,10 @@ export default function Report2() {
     let cancelled = false;
 
     async function loadData() {
-      setLoading(true);
-
       try {
+        setLoading(true);
+        setErrorMessage("");
+
         const monthsParam = selectedMonths.includes("ALL")
           ? "ALL"
           : [...selectedMonths].sort((a, b) => Number(a) - Number(b)).join(",");
@@ -327,32 +189,33 @@ export default function Report2() {
           `${API_BASE_URL}/api/report2/comparison?${params.toString()}`
         );
 
-        if (!res.ok) {
-          throw new Error("API not ready");
+        let json = null;
+
+        try {
+          json = await res.json();
+        } catch {
+          json = null;
         }
 
-        const json = await res.json();
+        if (!res.ok) {
+          throw new Error(json?.message || "שגיאה בטעינת נתוני דוח 2");
+        }
 
         if (!json?.rows || !Array.isArray(json.rows)) {
-          throw new Error("Bad API shape");
+          throw new Error("מבנה הנתונים שהתקבל מהשרת אינו תקין");
         }
 
         if (!cancelled) {
           setChartData(json.rows);
-          setApiMode("api");
         }
       } catch (error) {
-        console.error("Report2 API error:", error);
-
-        const mock = buildMockChartData({
-          yearA,
-          yearB,
-          selectedMonths,
-        });
+        console.error("Report2 load error:", error);
 
         if (!cancelled) {
-          setChartData(mock);
-          setApiMode("mock");
+          setChartData([]);
+          setErrorMessage(
+            error.message || "לא ניתן לטעון את נתוני הדוח כרגע"
+          );
         }
       } finally {
         if (!cancelled) {
@@ -370,23 +233,23 @@ export default function Report2() {
 
   const tableRows = useMemo(() => {
     return chartData
-      .map((d) => {
-        const delta = calcDelta(d.yearB, d.yearA);
-        const deltaPct = calcDeltaPct(d.yearB, d.yearA);
+      .map((row) => {
+        const delta = calcDelta(row.yearB, row.yearA);
+        const deltaPct = calcDeltaPct(row.yearB, row.yearA);
 
         return {
-          department: d.department,
-          selected: d.yearB,
-          compare: d.yearA,
+          department: row.department,
+          selected: row.yearB,
+          compare: row.yearA,
           delta,
           deltaPct,
         };
       })
-      .sort((x, y) => y.selected - x.selected);
+      .sort((a, b) => b.selected - a.selected);
   }, [chartData]);
 
-  const toggleMonth = (mKey) => {
-    if (mKey === "ALL") {
+  function toggleMonth(monthKey) {
+    if (monthKey === "ALL") {
       setSelectedMonths(["ALL"]);
       return;
     }
@@ -394,14 +257,16 @@ export default function Report2() {
     setSelectedMonths((prev) => {
       const clean = prev.includes("ALL") ? [] : prev;
 
-      if (clean.includes(mKey)) {
-        const next = clean.filter((x) => x !== mKey);
+      if (clean.includes(monthKey)) {
+        const next = clean.filter((item) => item !== monthKey);
         return next.length === 0 ? ["ALL"] : next;
       }
 
-      return [...clean, mKey];
+      return [...clean, monthKey].sort((a, b) => Number(a) - Number(b));
     });
-  };
+  }
+
+  const hasData = chartData.length > 0;
 
   return (
     <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
@@ -410,21 +275,14 @@ export default function Report2() {
 
       <div className="mx-auto max-w-6xl px-6 pt-28 pb-14">
         <div className="mt-6 text-center">
-          <div className="inline-flex items-center justify-center gap-3 align-middle">
-            <IcoTitle />
-
-            <h1 className="leading-none text-3xl font-extrabold tracking-tight">
-              דוח 2 - ביקושי המחלקות של הנרשמים למכללה בהשוואה לשנים האחרונות
-            </h1>
-          </div>
+          <h1 className="text-3xl font-extrabold tracking-tight">
+            דוח 2 - ביקושי המחלקות של הנרשמים למכללה בהשוואה לשנים האחרונות
+          </h1>
 
           <p className="mt-2 text-sm text-white/75">
             השוואה: <span className="font-semibold">{yearB}</span> מול{" "}
             <span className="font-semibold">{yearA}</span> | חודשים:{" "}
             <span className="font-semibold">{monthsLabel}</span>
-            <span className="mx-2 font-semibold">
-              {apiMode === "api" ? "API" : "MOCK"}
-            </span>
             {loading ? <span className="mr-2">(טוען...)</span> : null}
           </p>
         </div>
@@ -457,13 +315,13 @@ export default function Report2() {
           </div>
 
           <div className="flex flex-wrap justify-center gap-2">
-            {months.map((m) => {
-              const active = selectedMonths.includes(m.key);
+            {months.map((month) => {
+              const active = selectedMonths.includes(month.key);
 
               return (
                 <button
-                  key={m.key}
-                  onClick={() => toggleMonth(m.key)}
+                  key={month.key}
+                  onClick={() => toggleMonth(month.key)}
                   className={[
                     "rounded-full px-4 py-2 text-xs font-semibold transition",
                     "ring-1 ring-white/10",
@@ -472,173 +330,178 @@ export default function Report2() {
                       : "bg-white/5 text-white/80 hover:bg-white/10",
                   ].join(" ")}
                 >
-                  {m.label}
+                  {month.label}
                 </button>
               );
             })}
           </div>
         </div>
 
-        <div className="mt-8 flex flex-col gap-6 lg:flex-row-reverse">
-          <div className="w-full lg:w-[40%]">
-            <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
-              <div className="mb-4 flex items-center gap-2">
-                <IcoTable />
-                <div className="text-lg font-bold">ביקושי המחלקות (השוואה)</div>
-              </div>
+        {errorMessage ? (
+          <div className="mt-8 rounded-2xl border border-rose-300/20 bg-rose-500/10 p-5 text-center text-sm text-rose-100">
+            {errorMessage}
+          </div>
+        ) : null}
 
-              <div className="overflow-hidden rounded-2xl bg-[#2e3038] ring-1 ring-white/10">
-                <table className="w-full text-sm">
-                  <thead className="bg-white/5">
-                    <tr className="text-slate-200/90">
-                      <th className="px-4 py-3 text-right font-semibold">
-                        מחלקה
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        {buildTableHeader(yearB, monthsLabel)}
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        {buildTableHeader(yearA, monthsLabel)}
-                      </th>
-                      <th className="px-4 py-3 text-left font-semibold">
-                        שינוי
-                      </th>
-                    </tr>
-                  </thead>
+        {!loading && !errorMessage && !hasData ? (
+          <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-sm text-white/75">
+            אין נתונים להצגה עבור הסינון שנבחר.
+          </div>
+        ) : null}
 
-                  <tbody>
-                    {tableRows.map((r) => {
-                      const pos = r.delta > 0;
-                      const neg = r.delta < 0;
+        {hasData ? (
+          <div className="mt-8 flex flex-col gap-6 lg:flex-row-reverse">
+            <div className="w-full lg:w-[40%]">
+              <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
+                <div className="mb-4 text-lg font-bold">
+                  ביקושי המחלקות לפי נתוני המערכת
+                </div>
 
-                      const pctColor = pos
-                        ? "text-emerald-300"
-                        : neg
-                        ? "text-rose-300"
-                        : "text-slate-200";
+                <div className="overflow-hidden rounded-2xl bg-[#2e3038] ring-1 ring-white/10">
+                  <table className="w-full text-sm">
+                    <thead className="bg-white/5">
+                      <tr className="text-slate-200/90">
+                        <th className="px-4 py-3 text-right font-semibold">
+                          מחלקה
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          {yearB}
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          {yearA}
+                        </th>
+                        <th className="px-4 py-3 text-left font-semibold">
+                          שינוי
+                        </th>
+                      </tr>
+                    </thead>
 
-                      const dir = pos ? "up" : neg ? "down" : "neutral";
+                    <tbody>
+                      {tableRows.map((row) => {
+                        const positive = row.delta > 0;
+                        const negative = row.delta < 0;
 
-                      return (
-                        <tr
-                          key={r.department}
-                          className="border-t border-white/5"
-                        >
-                          <td className="px-4 py-3 font-medium text-slate-50">
-                            {r.department}
-                          </td>
+                        const color = positive
+                          ? "text-emerald-300"
+                          : negative
+                          ? "text-rose-300"
+                          : "text-slate-200";
 
-                          <td className="px-4 py-3 text-left text-slate-100">
-                            {fmtInt(r.selected)}
-                          </td>
+                        const icon = positive ? "▲" : negative ? "▼" : "•";
 
-                          <td className="px-4 py-3 text-left text-slate-100">
-                            {fmtInt(r.compare)}
-                          </td>
-
-                          <td
-                            className={`px-4 py-3 text-left font-semibold ${pctColor}`}
+                        return (
+                          <tr
+                            key={row.department}
+                            className="border-t border-white/5"
                           >
-                            <div className="flex items-center justify-end gap-2">
-                              <span>
-                                {fmtInt(r.delta)} ({fmtPct(r.deltaPct)})
+                            <td className="px-4 py-3 font-medium text-slate-50">
+                              {row.department}
+                            </td>
+
+                            <td className="px-4 py-3 text-left text-slate-100">
+                              {fmtInt(row.selected)}
+                            </td>
+
+                            <td className="px-4 py-3 text-left text-slate-100">
+                              {fmtInt(row.compare)}
+                            </td>
+
+                            <td
+                              className={`px-4 py-3 text-left font-semibold ${color}`}
+                            >
+                              <span className="inline-flex items-center gap-2">
+                                <span>{icon}</span>
+                                <span>
+                                  {fmtInt(row.delta)} ({fmtPct(row.deltaPct)})
+                                </span>
                               </span>
-                              <TrendArrow dir={dir} />
-                            </div>
-                          </td>
-                        </tr>
-                      );
-                    })}
-                  </tbody>
-                </table>
-              </div>
+                            </td>
+                          </tr>
+                        );
+                      })}
+                    </tbody>
+                  </table>
+                </div>
 
-              <div className="mt-3 text-xs text-slate-200/70">
-                שינוי מחושב ביחס ל־{yearA} עבור החודשים שנבחרו ({monthsLabel}).
+                <div className="mt-3 text-xs text-slate-200/70">
+                  שינוי מחושב ביחס ל־{yearA} עבור החודשים שנבחרו ({monthsLabel}).
+                </div>
+              </div>
+            </div>
+
+            <div className="w-full lg:w-[60%]">
+              <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
+                <div className="mb-4 text-lg font-bold">נרשמים לפי מחלקה</div>
+
+                <div className="rounded-2xl bg-[#2e3038] p-4 ring-1 ring-white/10">
+                  <ResponsiveContainer width="100%" height={460}>
+                    <BarChart
+                      data={chartData}
+                      margin={{ top: 10, right: 8, left: 80, bottom: 34 }}
+                      barCategoryGap="6%"
+                      barGap={10}
+                    >
+                      <CartesianGrid
+                        strokeDasharray="3 3"
+                        stroke="rgba(255,255,255,0.08)"
+                      />
+
+                      <XAxis
+                        dataKey="department"
+                        interval={0}
+                        height={64}
+                        tick={<CustomXAxisTick />}
+                        tickLine={false}
+                        axisLine={{ stroke: "rgba(255,255,255,0.18)" }}
+                      />
+
+                      <YAxis
+                        width={64}
+                        tick={{ fill: "rgba(255,255,255,0.72)", fontSize: 12 }}
+                        dx={-14}
+                        tickMargin={16}
+                        tickLine={false}
+                        axisLine={false}
+                      />
+
+                      <Tooltip
+                        content={
+                          <CustomTooltip
+                            yearA={yearA}
+                            yearB={yearB}
+                            monthsLabel={monthsLabel}
+                          />
+                        }
+                      />
+
+                      <Legend content={<CustomLegend />} />
+
+                      <Bar
+                        dataKey="yearB"
+                        name={yearB}
+                        fill="rgba(96,165,250,0.85)"
+                        radius={[8, 8, 0, 0]}
+                        barSize={38}
+                      />
+
+                      <Bar
+                        dataKey="yearA"
+                        name={yearA}
+                        fill="rgba(148,163,184,0.55)"
+                        radius={[8, 8, 0, 0]}
+                        barSize={38}
+                      />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </div>
+
+                <div className="mt-3 text-xs text-white/60">
+                  * הנתונים מגיעים מבסיס הנתונים דרך ה־Backend בלבד.
+                </div>
               </div>
             </div>
           </div>
-
-          <div className="w-full lg:w-[60%]">
-            <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
-              <div className="mb-4 flex items-center gap-2">
-                <IcoChart />
-                <div className="text-lg font-bold">נרשמים לפי מחלקה</div>
-              </div>
-
-              <div className="rounded-2xl bg-[#2e3038] p-4 ring-1 ring-white/10">
-                <ResponsiveContainer width="100%" height={460}>
-                  <BarChart
-                    data={chartData}
-                    margin={{ top: 10, right: 8, left: 80, bottom: 34 }}
-                    barCategoryGap="6%"
-                    barGap={10}
-                  >
-                    <CartesianGrid
-                      strokeDasharray="3 3"
-                      stroke="rgba(255,255,255,0.08)"
-                    />
-
-                    <XAxis
-                      dataKey="department"
-                      interval={0}
-                      height={64}
-                      tick={<CustomXAxisTick />}
-                      tickLine={false}
-                      axisLine={{ stroke: "rgba(255,255,255,0.18)" }}
-                    />
-
-                    <YAxis
-                      width={64}
-                      tick={{ fill: "rgba(255,255,255,0.72)", fontSize: 12 }}
-                      dx={-14}
-                      tickMargin={16}
-                      tickLine={false}
-                      axisLine={false}
-                    />
-
-                    <Tooltip
-                      content={
-                        <CustomTooltip
-                          yearA={yearA}
-                          yearB={yearB}
-                          monthsLabel={monthsLabel}
-                        />
-                      }
-                      cursor={<CustomCursor />}
-                    />
-
-                    <Legend content={<CustomLegend />} />
-
-                    <Bar
-                      dataKey="yearB"
-                      name={yearB}
-                      fill="rgba(96,165,250,0.85)"
-                      radius={[8, 8, 0, 0]}
-                      barSize={38}
-                      activeBar={{
-                        stroke: "rgba(255,255,255,0.45)",
-                        strokeWidth: 2,
-                      }}
-                    />
-
-                    <Bar
-                      dataKey="yearA"
-                      name={yearA}
-                      fill="rgba(148,163,184,0.55)"
-                      radius={[8, 8, 0, 0]}
-                      barSize={38}
-                      activeBar={{
-                        stroke: "rgba(255,255,255,0.35)",
-                        strokeWidth: 2,
-                      }}
-                    />
-                  </BarChart>
-                </ResponsiveContainer>
-              </div>
-            </div>
-          </div>
-        </div>
+        ) : null}
       </div>
     </div>
   );
