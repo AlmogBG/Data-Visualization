@@ -1,196 +1,131 @@
 const prisma = require("../config/db");
 
 const yearMap = {
-  'תשפ״ב': 2022,
-  'תשפ״ג': 2023,
-  'תשפ״ד': 2024,
-  'תשפ״ה': 2025,
+  "תשפ״ב": 2022,
+  "תשפ״ג": 2023,
+  "תשפ״ד": 2024,
+  "תשפ״ה": 2025,
+  "תשפ״ו": 2026,
 };
 
-const monthKeys = [
-  "01", "02", "03", "04", "05", "06",
-  "07", "08", "09", "10", "11", "12",
+const campusKeys = ["ASHDOD", "BEER_SHEVA"];
+
+const outcomeOptions = [
+  { key: "נרשם", name: "נרשם" },
+  { key: "לא רלוונטי", name: "לא רלוונטי" },
+  { key: "לא מעוניין", name: "לא מעוניין" },
+  { key: "להמשך טיפול", name: "להמשך טיפול" },
+  { key: "ייצור קשר בעצמו", name: "ייצור קשר בעצמו" },
+  { key: "אחר", name: "אחר" },
 ];
 
-const monthLabels = {
-  "01": "01",
-  "02": "02",
-  "03": "03",
-  "04": "04",
-  "05": "05",
-  "06": "06",
-  "07": "07",
-  "08": "08",
-  "09": "09",
-  "10": "10",
-  "11": "11",
-  "12": "12",
-};
+function normalizeYear(value) {
+  if (!value) return new Date().getFullYear();
 
-const outcomeLabelMap = {
-  ENROLLED: "נרשם",
-  NOT_RELEVANT: "לא רלוונטי",
-  NOT_INTERESTED: "לא מעוניין",
-  FOLLOWUP: "רלוונטי ונמשך טיפול",
-  SELF_CONTACT: "ייצור קשר בעצמו – לא רלוונטי",
-  OTHER: "אחר",
-};
+  if (yearMap[value]) return yearMap[value];
 
-function normalizeOutcomeValue(value) {
-  if (!value) return "OTHER";
+  const parsed = Number(value);
+  if (Number.isFinite(parsed)) return parsed;
 
-  const cleaned = String(value).trim();
-  const reversed = cleaned.split("").reverse().join("").trim();
+  return new Date().getFullYear();
+}
 
-  const directMap = {
-    ENROLLED: "ENROLLED",
-    NOT_RELEVANT: "NOT_RELEVANT",
-    NOT_INTERESTED: "NOT_INTERESTED",
-    FOLLOWUP: "FOLLOWUP",
-    SELF_CONTACT: "SELF_CONTACT",
-    OTHER: "OTHER",
-
-    "נרשם": "ENROLLED",
-    "נרשמה": "ENROLLED",
-    "רשום": "ENROLLED",
-    "םשרנ": "ENROLLED",
-
-    "לא רלוונטי": "NOT_RELEVANT",
-    "לא רלוונטית": "NOT_RELEVANT",
-    "יטנוולר אל": "NOT_RELEVANT",
-
-    "לא מעוניין": "NOT_INTERESTED",
-    "לא מעוניינת": "NOT_INTERESTED",
-    "ןיינועמ אל": "NOT_INTERESTED",
-
-    "במעקב": "FOLLOWUP",
-    "מעקב": "FOLLOWUP",
-    "להמשך טיפול": "FOLLOWUP",
-    "המשך טיפול": "FOLLOWUP",
-    "רלוונטי": "FOLLOWUP",
-    "רלוונטית": "FOLLOWUP",
-    "רלוונטי ונמשך טיפול": "FOLLOWUP",
-    "לופיט ךשמהל": "FOLLOWUP",
-
-    "יצירת קשר חוזרת": "SELF_CONTACT",
-    "יצור קשר חוזר": "SELF_CONTACT",
-    "ייצור קשר חוזר": "SELF_CONTACT",
-    "תרזוח רשק תריצי": "SELF_CONTACT",
-    "ייצור קשר בעצמו – לא רלוונטי": "SELF_CONTACT",
-    "ייצור קשר בעצמו - לא רלוונטי": "SELF_CONTACT",
-
-    "אחר": "OTHER",
-    "רחא": "OTHER",
-  };
-
-  if (directMap[cleaned]) {
-    return directMap[cleaned];
+function normalizeMonthList(monthsQuery) {
+  if (!monthsQuery) {
+    return Array.from({ length: 12 }, (_, index) => index + 1);
   }
 
-  if (directMap[reversed]) {
-    return directMap[reversed];
-  }
+  const values = String(monthsQuery)
+    .split(",")
+    .map((item) => Number(item.trim()))
+    .filter((num) => Number.isFinite(num) && num >= 1 && num <= 12);
 
-  const upper = cleaned.toUpperCase();
-  return directMap[upper] || "OTHER";
+  return values.length > 0
+    ? values
+    : Array.from({ length: 12 }, (_, index) => index + 1);
 }
 
 function normalizeCampusValue(value) {
   if (!value) return null;
 
-  const cleaned = String(value).trim();
+  const raw = String(value).trim();
+  const normalized = raw.toUpperCase();
 
-  if (cleaned === "ASHDOD" || cleaned === "אשדוד") {
-    return "ASHDOD";
-  }
+  if (normalized === "ASHDOD") return "ASHDOD";
+  if (normalized === "BEER_SHEVA") return "BEER_SHEVA";
+  if (normalized === "BEER SHEVA") return "BEER_SHEVA";
+  if (normalized === "BEERSHEVA") return "BEER_SHEVA";
 
-  if (
-    cleaned === "BEER_SHEVA" ||
-    cleaned === "באר שבע" ||
-    cleaned === "באר-שבע"
-  ) {
-    return "BEER_SHEVA";
-  }
+  if (raw.includes("אשדוד")) return "ASHDOD";
+  if (raw.includes("באר")) return "BEER_SHEVA";
 
-  return cleaned;
+  return null;
 }
 
-function buildCampusLeadWhere(campus) {
-  if (campus === "ASHDOD") {
-    return {
-      OR: [{ campus: "ASHDOD" }, { campus: "אשדוד" }],
+function normalizeOutcomeValue(value) {
+  if (!value) return "אחר";
+
+  const raw = String(value).trim();
+
+  const map = {
+    ENROLLED: "נרשם",
+    NOT_RELEVANT: "לא רלוונטי",
+    NOT_INTERESTED: "לא מעוניין",
+    FOLLOWUP: "להמשך טיפול",
+    SELF_CONTACT: "ייצור קשר בעצמו",
+    OTHER: "אחר",
+
+    "נרשם": "נרשם",
+    "לא רלוונטי": "לא רלוונטי",
+    "לא מעוניין": "לא מעוניין",
+    "להמשך טיפול": "להמשך טיפול",
+    "ייצור קשר בעצמו": "ייצור קשר בעצמו",
+    "אחר": "אחר",
+  };
+
+  return map[raw] || "אחר";
+}
+
+function monthLabel(year, monthNumber) {
+  return `${String(monthNumber).padStart(2, "0")}/${String(year).slice(-2)}`;
+}
+
+function buildEmptyOutcomeResult() {
+  const result = {};
+
+  for (const campusKey of campusKeys) {
+    result[campusKey] = {
+      campus: campusKey,
+      items: outcomeOptions.map((item) => ({
+        key: item.key,
+        name: item.name,
+        value: 0,
+      })),
     };
   }
 
-  if (campus === "BEER_SHEVA") {
-    return {
-      OR: [
-        { campus: "BEER_SHEVA" },
-        { campus: "באר שבע" },
-        { campus: "באר-שבע" },
-      ],
-    };
-  }
-
-  return {};
-}
-
-function buildCampusKeys(campus) {
-  if (campus === "ASHDOD") return ["ASHDOD"];
-  if (campus === "BEER_SHEVA") return ["BEER_SHEVA"];
-  return ["ASHDOD", "BEER_SHEVA"];
-}
-
-function buildMonthLabel(monthKey, gregorianYear) {
-  const yearSuffix = String(gregorianYear).slice(-2);
-  return `${monthLabels[monthKey] || monthKey}/${yearSuffix}`;
+  return result;
 }
 
 async function getReport4Monthly(req, res) {
   try {
-    const {
-      campus = "BOTH",
-      year = "תשפ״ה",
-      months = "ALL",
-    } = req.query;
+    const year = normalizeYear(req.query.year);
+    const selectedMonthNumbers = normalizeMonthList(req.query.months);
+    const selectedMonthSet = new Set(selectedMonthNumbers);
 
-    const gregorianYear = yearMap[year];
-    if (!gregorianYear) {
-      return res.status(400).json({ message: "שנה לא תקינה" });
-    }
-
-    const selectedMonths = parseMonthsParam(months);
-    const selectedMonthNumbers = new Set(selectedMonths.map((m) => Number(m)));
-
-    const startDate = new Date(gregorianYear, 0, 1);
-    const endDate = new Date(gregorianYear, 11, 31, 23, 59, 59, 999);
-
-    const leads = await prisma.lead.findMany({
-      where: {
-        ...buildCampusLeadWhere(campus),
-        createdAt: {
-          gte: startDate,
-          lte: endDate,
-        },
-      },
-      select: {
-        id: true,
-        campus: true,
-        createdAt: true,
-      },
-    });
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
 
     const consultations = await prisma.consultation.findMany({
       where: {
         meetingDate: {
           gte: startDate,
-          lte: endDate,
+          lt: endDate,
         },
       },
       select: {
-        id: true,
-        arrived: true,
         meetingDate: true,
+        arrived: true,
         lead: {
           select: {
             campus: true,
@@ -199,78 +134,46 @@ async function getReport4Monthly(req, res) {
       },
     });
 
-    const rows = selectedMonths.map((mKey) => ({
-      month: mKey,
-      label: buildMonthLabel(mKey, gregorianYear),
+    const rows = selectedMonthNumbers.map((monthNumber) => ({
+      month: String(monthNumber).padStart(2, "0"),
+      label: monthLabel(year, monthNumber),
       invitedAshdod: 0,
       invitedBeer: 0,
       attendedAshdod: 0,
       attendedBeer: 0,
     }));
 
-    const rowMap = new Map(rows.map((row) => [row.month, row]));
-    const campusKeys = buildCampusKeys(campus);
-
-    for (const lead of leads) {
-      const normalizedCampus = normalizeCampusValue(lead.campus);
-      if (!normalizedCampus || !campusKeys.includes(normalizedCampus)) continue;
-
-      const leadDate = new Date(lead.createdAt);
-      const monthNumber = leadDate.getMonth() + 1;
-      if (!selectedMonthNumbers.has(monthNumber)) continue;
-
-      const monthKey = String(monthNumber).padStart(2, "0");
-      const row = rowMap.get(monthKey);
-      if (!row) continue;
-
-      if (normalizedCampus === "ASHDOD") {
-        row.invitedAshdod += 1;
-      } else if (normalizedCampus === "BEER_SHEVA") {
-        row.invitedBeer += 1;
-      }
-    }
+    const rowMap = new Map(rows.map((row) => [Number(row.month), row]));
 
     for (const consultation of consultations) {
-      const campusFromLead = normalizeCampusValue(consultation.lead?.campus);
-      if (!campusFromLead || !campusKeys.includes(campusFromLead)) continue;
+      if (!consultation.meetingDate) continue;
 
       const consultationDate = new Date(consultation.meetingDate);
       const monthNumber = consultationDate.getMonth() + 1;
-      if (!selectedMonthNumbers.has(monthNumber)) continue;
-      if (consultation.arrived !== true) continue;
 
-      const monthKey = String(monthNumber).padStart(2, "0");
-      const row = rowMap.get(monthKey);
-      if (!row) continue;
+      if (!selectedMonthSet.has(monthNumber)) continue;
 
-      if (campusFromLead === "ASHDOD") {
-        row.attendedAshdod += 1;
-      } else if (campusFromLead === "BEER_SHEVA") {
-        row.attendedBeer += 1;
+      const campus = normalizeCampusValue(consultation.lead?.campus);
+      const row = rowMap.get(monthNumber);
+
+      if (!campus || !row) continue;
+
+      if (campus === "ASHDOD") {
+        row.invitedAshdod += 1;
+        if (consultation.arrived) row.attendedAshdod += 1;
+      }
+
+      if (campus === "BEER_SHEVA") {
+        row.invitedBeer += 1;
+        if (consultation.arrived) row.attendedBeer += 1;
       }
     }
 
-    let result = rows;
-
-    if (campus === "ASHDOD") {
-      result = rows.map((row) => ({
-        ...row,
-        invitedBeer: null,
-        attendedBeer: null,
-      }));
-    } else if (campus === "BEER_SHEVA") {
-      result = rows.map((row) => ({
-        ...row,
-        invitedAshdod: null,
-        attendedAshdod: null,
-      }));
-    }
-
-    return res.json(result);
+    return res.json(rows);
   } catch (error) {
     console.error("getReport4Monthly error:", error);
     return res.status(500).json({
-      message: "שגיאת שרת בשליפת נתוני דוח 4 חודשי",
+      message: "שגיאה בטעינת דוח 4 - נתוני פגישות חודשיים",
       error: error.message,
     });
   }
@@ -278,34 +181,23 @@ async function getReport4Monthly(req, res) {
 
 async function getReport4Outcomes(req, res) {
   try {
-    const {
-      campus = "BOTH",
-      year = "תשפ״ה",
-      months = "ALL",
-    } = req.query;
+    const year = normalizeYear(req.query.year);
+    const selectedMonthNumbers = normalizeMonthList(req.query.months);
+    const selectedMonthSet = new Set(selectedMonthNumbers);
 
-    const gregorianYear = yearMap[year];
-    if (!gregorianYear) {
-      return res.status(400).json({ message: "שנה לא תקינה" });
-    }
-
-    const selectedMonths = parseMonthsParam(months);
-    const selectedMonthNumbers = new Set(selectedMonths.map((m) => Number(m)));
-    const campusKeys = buildCampusKeys(campus);
-
-    const startDate = new Date(gregorianYear, 0, 1);
-    const endDate = new Date(gregorianYear, 11, 31, 23, 59, 59, 999);
+    const startDate = new Date(year, 0, 1);
+    const endDate = new Date(year + 1, 0, 1);
 
     const consultations = await prisma.consultation.findMany({
       where: {
         meetingDate: {
           gte: startDate,
-          lte: endDate,
+          lt: endDate,
         },
       },
       select: {
-        outcome: true,
         meetingDate: true,
+        outcome: true,
         lead: {
           select: {
             campus: true,
@@ -314,18 +206,7 @@ async function getReport4Outcomes(req, res) {
       },
     });
 
-    const result = {};
-
-    for (const campusKey of campusKeys) {
-      result[campusKey] = {
-        campus: campusKey,
-        items: Object.keys(outcomeLabelMap).map((key) => ({
-          key,
-          name: outcomeLabelMap[key],
-          value: 0,
-        })),
-      };
-    }
+    const result = buildEmptyOutcomeResult();
 
     const itemMap = {};
     for (const campusKey of campusKeys) {
@@ -335,17 +216,20 @@ async function getReport4Outcomes(req, res) {
     }
 
     for (const consultation of consultations) {
-      const campusFromLead = normalizeCampusValue(consultation.lead?.campus);
-      if (!campusFromLead || !campusKeys.includes(campusFromLead)) continue;
+      if (!consultation.meetingDate) continue;
 
       const consultationDate = new Date(consultation.meetingDate);
       const monthNumber = consultationDate.getMonth() + 1;
-      if (!selectedMonthNumbers.has(monthNumber)) continue;
+
+      if (!selectedMonthSet.has(monthNumber)) continue;
+
+      const campus = normalizeCampusValue(consultation.lead?.campus);
+      if (!campus || !campusKeys.includes(campus)) continue;
 
       const outcomeKey = normalizeOutcomeValue(consultation.outcome);
+
       const target =
-        itemMap[campusFromLead].get(outcomeKey) ||
-        itemMap[campusFromLead].get("OTHER");
+        itemMap[campus].get(outcomeKey) || itemMap[campus].get("אחר");
 
       if (target) {
         target.value += 1;
@@ -356,7 +240,7 @@ async function getReport4Outcomes(req, res) {
   } catch (error) {
     console.error("getReport4Outcomes error:", error);
     return res.status(500).json({
-      message: "שגיאת שרת בשליפת תוצאות דוח 4",
+      message: "שגיאה בטעינת דוח 4 - תוצאות פגישות ייעוץ",
       error: error.message,
     });
   }
