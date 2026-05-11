@@ -36,18 +36,63 @@ const outcomeLabelMap = {
   OTHER: "אחר",
 };
 
-function parseMonthsParam(monthsParam) {
-  if (!monthsParam || monthsParam === "ALL") {
-    return monthKeys;
+function normalizeOutcomeValue(value) {
+  if (!value) return "OTHER";
+
+  const cleaned = String(value).trim();
+  const reversed = cleaned.split("").reverse().join("").trim();
+
+  const directMap = {
+    ENROLLED: "ENROLLED",
+    NOT_RELEVANT: "NOT_RELEVANT",
+    NOT_INTERESTED: "NOT_INTERESTED",
+    FOLLOWUP: "FOLLOWUP",
+    SELF_CONTACT: "SELF_CONTACT",
+    OTHER: "OTHER",
+
+    "נרשם": "ENROLLED",
+    "נרשמה": "ENROLLED",
+    "רשום": "ENROLLED",
+    "םשרנ": "ENROLLED",
+
+    "לא רלוונטי": "NOT_RELEVANT",
+    "לא רלוונטית": "NOT_RELEVANT",
+    "יטנוולר אל": "NOT_RELEVANT",
+
+    "לא מעוניין": "NOT_INTERESTED",
+    "לא מעוניינת": "NOT_INTERESTED",
+    "ןיינועמ אל": "NOT_INTERESTED",
+
+    "במעקב": "FOLLOWUP",
+    "מעקב": "FOLLOWUP",
+    "להמשך טיפול": "FOLLOWUP",
+    "המשך טיפול": "FOLLOWUP",
+    "רלוונטי": "FOLLOWUP",
+    "רלוונטית": "FOLLOWUP",
+    "רלוונטי ונמשך טיפול": "FOLLOWUP",
+    "לופיט ךשמהל": "FOLLOWUP",
+
+    "יצירת קשר חוזרת": "SELF_CONTACT",
+    "יצור קשר חוזר": "SELF_CONTACT",
+    "ייצור קשר חוזר": "SELF_CONTACT",
+    "תרזוח רשק תריצי": "SELF_CONTACT",
+    "ייצור קשר בעצמו – לא רלוונטי": "SELF_CONTACT",
+    "ייצור קשר בעצמו - לא רלוונטי": "SELF_CONTACT",
+
+    "אחר": "OTHER",
+    "רחא": "OTHER",
+  };
+
+  if (directMap[cleaned]) {
+    return directMap[cleaned];
   }
 
-  const parsed = String(monthsParam)
-    .split(",")
-    .map((m) => m.trim())
-    .filter((m) => monthKeys.includes(m))
-    .sort((a, b) => Number(a) - Number(b));
+  if (directMap[reversed]) {
+    return directMap[reversed];
+  }
 
-  return parsed.length ? parsed : monthKeys;
+  const upper = cleaned.toUpperCase();
+  return directMap[upper] || "OTHER";
 }
 
 function normalizeCampusValue(value) {
@@ -297,7 +342,7 @@ async function getReport4Outcomes(req, res) {
       const monthNumber = consultationDate.getMonth() + 1;
       if (!selectedMonthNumbers.has(monthNumber)) continue;
 
-      const outcomeKey = consultation.outcome || "OTHER";
+      const outcomeKey = normalizeOutcomeValue(consultation.outcome);
       const target =
         itemMap[campusFromLead].get(outcomeKey) ||
         itemMap[campusFromLead].get("OTHER");
