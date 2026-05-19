@@ -22,3 +22,8 @@ export async function getHomeSummary() {
   const res = await fetch(`${BASE_URL}/api/home/summary`);
   return handleJson(res, "Failed to fetch home summary");
 }
+
+export async function getAnomalies() {
+  const res = await fetch(`${BASE_URL}/api/stats/anomalies`);
+  return handleJson(res, "Failed to fetch anomalies");
+}

@@ -5,10 +5,11 @@ import {
   HiOutlineUserGroup,
   HiOutlineCurrencyDollar,
   HiOutlineCalendarDays,
+  HiOutlineExclamationTriangle
 } from "react-icons/hi2";
 import KpiCard from "../components/KpiCard";
 import Sidebar from "../components/Sidebar";
-import { getHomeSummary } from "../api/metricsApi";
+import { getHomeSummary, getAnomalies } from "../api/metricsApi";
 
 function trendFromDelta(deltaPct) {
   if (deltaPct > 0) {
@@ -64,6 +65,7 @@ export default function HomePage() {
   const [summary, setSummary] = useState(null);
   const [loading, setLoading] = useState(true);
   const [updatedAt, setUpdatedAt] = useState(createUpdatedAtText());
+  const [anomalies, setAnomalies] = useState([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -73,9 +75,11 @@ export default function HomePage() {
         setLoading(true);
 
         const data = await getHomeSummary();
+        const anomaliesData = await getAnomalies().catch(() => ({ anomalies: [] }));
 
         if (!cancelled) {
           setSummary(data);
+          if (anomaliesData?.anomalies) setAnomalies(anomaliesData.anomalies);
           setUpdatedAt(createUpdatedAtText());
         }
       } catch (error) {
@@ -220,6 +224,24 @@ export default function HomePage() {
       <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
 
       <div className="mx-auto max-w-6xl px-6 pt-28">
+      {anomalies.length > 0 && (
+          <div className="mb-8 space-y-4">
+            {anomalies.map((anomaly) => (
+              <div 
+                key={anomaly.id} 
+                className="flex items-start gap-4 rounded-2xl bg-amber-500/20 border border-amber-500/50 p-5 shadow-lg"
+              >
+                <div className="flex-shrink-0 mt-1">
+                  <HiOutlineExclamationTriangle className="text-3xl text-amber-400" />
+                </div>
+                <div>
+                  <h3 className="text-lg font-bold text-amber-400">{anomaly.title}</h3>
+                  <p className="mt-1 text-sm text-white/90">{anomaly.message}</p>
+                </div>
+              </div>
+            ))}
+          </div>
+        )}
         <div className="mt-8 text-center">
           <h1 className="flex items-center justify-center gap-3 text-3xl font-extrabold tracking-tight">
             <HiOutlineChartBar className="text-4xl text-sky-300" />

@@ -10,5 +10,6 @@ router.get("/", (req, res) => {
 });
 
 router.get("/cities", getLeadsByCity);
+router.get("/anomalies", getAnomalies);
 
 module.exports = router;
