@@ -35,11 +35,20 @@ import {
   SquarePen,
   X,
   Trash2,
+  Filter,
 } from "lucide-react";
 
 const campusOptions = ["אשדוד", "באר שבע"];
 const areaOptions = ["דרום", "מרכז", "צפון", "שפלה", "ירושלים"];
-const sourceOptions = ["פייסבוק", "אינסטגרם", "גוגל", "אתר", "טלפון", "המלצה", "אחר"];
+const sourceOptions = [
+  "פייסבוק",
+  "אינסטגרם",
+  "גוגל",
+  "אתר",
+  "טלפון",
+  "המלצה",
+  "אחר",
+];
 
 const outcomeOptions = [
   { value: "", label: "ללא" },
@@ -76,6 +85,56 @@ function formatDateTime(value) {
 
 function getOutcomeLabel(value) {
   return outcomeLabelMap[value] || "-";
+}
+
+function normalizeCampusForDisplay(value) {
+  if (!value) return "-";
+
+  const cleaned = String(value).trim();
+
+  if (cleaned === "ASHDOD") return "אשדוד";
+  if (cleaned === "BEER_SHEVA") return "באר שבע";
+
+  return cleaned;
+}
+
+function normalizeCampusForCompare(value) {
+  if (!value) return "";
+
+  const cleaned = String(value).trim();
+
+  if (cleaned === "אשדוד" || cleaned === "ASHDOD") {
+    return "ASHDOD";
+  }
+
+  if (
+    cleaned === "באר שבע" ||
+    cleaned === "באר-שבע" ||
+    cleaned === "BEER_SHEVA"
+  ) {
+    return "BEER_SHEVA";
+  }
+
+  return cleaned;
+}
+
+function getLoggedInUsername() {
+  try {
+    const storedUser = JSON.parse(localStorage.getItem("user") || "{}");
+
+    return (
+      storedUser.username ||
+      localStorage.getItem("loggedInUsername") ||
+      sessionStorage.getItem("loggedInUsername") ||
+      ""
+    );
+  } catch (error) {
+    return (
+      localStorage.getItem("loggedInUsername") ||
+      sessionStorage.getItem("loggedInUsername") ||
+      ""
+    );
+  }
 }
 
 function isValidIsraeliPhone(phone) {
@@ -218,6 +277,8 @@ export default function ConsultationPage() {
   const [selectedLead, setSelectedLead] = useState(null);
   const [consultations, setConsultations] = useState([]);
   const [editingConsultationId, setEditingConsultationId] = useState(null);
+  const [consultationCampusFilter, setConsultationCampusFilter] =
+    useState("ALL");
 
   const [leadForm, setLeadForm] = useState(emptyLeadForm);
   const [consultationForm, setConsultationForm] = useState(
@@ -235,9 +296,25 @@ export default function ConsultationPage() {
   const consultationCardRef = useRef(null);
   const [calendarRefreshKey, setCalendarRefreshKey] = useState(0);
 
+  const loggedInUsername = useMemo(() => getLoggedInUsername(), []);
+
   const calendarEmbedUrl = useMemo(() => {
     return `${GOOGLE_CALENDAR_EMBED_BASE_URL}&refresh=${calendarRefreshKey}`;
   }, [calendarRefreshKey]);
+
+  const filteredConsultations = useMemo(() => {
+    if (consultationCampusFilter === "ALL") return consultations;
+
+    const wantedCampus = normalizeCampusForCompare(consultationCampusFilter);
+
+    return consultations.filter((item) => {
+      const itemCampus = normalizeCampusForCompare(
+        item.leadCampus || selectedLead?.campus
+      );
+
+      return itemCampus === wantedCampus;
+    });
+  }, [consultations, consultationCampusFilter, selectedLead]);
 
   useEffect(() => {
     async function loadOptions() {
@@ -322,6 +399,7 @@ export default function ConsultationPage() {
 
     setIsEditingLead(false);
     setLeadErrors({});
+    setConsultationCampusFilter("ALL");
     await refreshLeadConsultations(lead.id);
   }
 
@@ -336,6 +414,7 @@ export default function ConsultationPage() {
     setLeadErrors({});
     setConsultationForm(emptyConsultationForm);
     setConsultationErrors({});
+    setConsultationCampusFilter("ALL");
   }
 
   function handleClearConsultationForm() {
@@ -514,6 +593,7 @@ export default function ConsultationPage() {
         arrived:
           consultationForm.arrived === "" ? null : consultationForm.arrived,
         notes: consultationForm.notes,
+        createdByUsername: loggedInUsername,
       };
 
       if (editingConsultationId) {
@@ -596,7 +676,7 @@ export default function ConsultationPage() {
       name: selectedLead.fullName,
       phone: selectedLead.phone || "-",
       email: selectedLead.email || "-",
-      campus: selectedLead.campus || "-",
+      campus: normalizeCampusForDisplay(selectedLead.campus),
       area: selectedLead.area || "-",
       source: selectedLead.source || "-",
       status: selectedLead.status || "-",
@@ -653,7 +733,10 @@ export default function ConsultationPage() {
                 placeholder="טלפון"
                 value={searchValues.phone}
                 onChange={(e) =>
-                  setSearchValues((prev) => ({ ...prev, phone: e.target.value }))
+                  setSearchValues((prev) => ({
+                    ...prev,
+                    phone: e.target.value,
+                  }))
                 }
               />
 
@@ -663,7 +746,10 @@ export default function ConsultationPage() {
                 placeholder="אימייל"
                 value={searchValues.email}
                 onChange={(e) =>
-                  setSearchValues((prev) => ({ ...prev, email: e.target.value }))
+                  setSearchValues((prev) => ({
+                    ...prev,
+                    email: e.target.value,
+                  }))
                 }
               />
 
@@ -1023,6 +1109,13 @@ export default function ConsultationPage() {
               <div className="text-lg font-bold">פגישת ייעוץ</div>
             </div>
 
+            <div className="mt-4 rounded-xl bg-white/[0.04] p-3 text-sm text-white/70 ring-1 ring-white/10">
+              <div className="flex items-center gap-2">
+                <Users size={14} className="text-violet-300" />
+                <span>נקבע על ידי: {loggedInUsername || "-"}</span>
+              </div>
+            </div>
+
             <div className="mt-5 grid grid-cols-1 gap-3">
               <InputField
                 icon={CalendarDays}
@@ -1148,11 +1241,38 @@ export default function ConsultationPage() {
         </div>
 
         <div className="mt-8 rounded-[28px] bg-[#363943] p-5 shadow-[0_14px_36px_rgba(0,0,0,0.26)] ring-1 ring-white/10">
-          <div className="flex items-center gap-3">
-            <div className="rounded-xl bg-amber-500/12 p-2.5 text-amber-300">
-              <ListChecks size={18} />
+          <div className="flex flex-col gap-4 lg:flex-row lg:items-center lg:justify-between">
+            <div className="flex items-center gap-3">
+              <div className="rounded-xl bg-amber-500/12 p-2.5 text-amber-300">
+                <ListChecks size={18} />
+              </div>
+
+              <div>
+                <div className="text-lg font-bold">רשימת פגישות קודמות</div>
+                <div className="mt-1 text-xs text-white/55">
+                  מציג {filteredConsultations.length} מתוך{" "}
+                  {consultations.length} פגישות
+                </div>
+              </div>
             </div>
-            <div className="text-lg font-bold">רשימת פגישות קודמות</div>
+
+            <div className="w-full lg:w-64">
+              <SelectField
+                icon={Filter}
+                value={consultationCampusFilter}
+                onChange={(e) => setConsultationCampusFilter(e.target.value)}
+              >
+                <option value="ALL" className="text-black">
+                  כל הקמפוסים
+                </option>
+                <option value="אשדוד" className="text-black">
+                  אשדוד
+                </option>
+                <option value="באר שבע" className="text-black">
+                  באר שבע
+                </option>
+              </SelectField>
+            </div>
           </div>
 
           {!selectedLead ? (
@@ -1163,12 +1283,24 @@ export default function ConsultationPage() {
             <div className="mt-4 rounded-xl bg-white/[0.04] p-4 text-sm text-white/65 ring-1 ring-white/10">
               אין עדיין פגישות שמורות למועמד זה
             </div>
+          ) : filteredConsultations.length === 0 ? (
+            <div className="mt-4 rounded-xl bg-white/[0.04] p-4 text-sm text-white/65 ring-1 ring-white/10">
+              אין פגישות להצגה לפי הסינון שנבחר
+            </div>
           ) : (
             <div className="mt-4 overflow-x-auto">
-              <table className="w-full min-w-[980px] border-separate border-spacing-y-2.5">
+              <table className="w-full min-w-[1450px] border-separate border-spacing-y-2.5">
                 <thead>
                   <tr className="text-right text-sm text-white/60">
                     <th className="px-3">תאריך פגישה</th>
+                    <th className="px-3">שם מועמד</th>
+                    <th className="px-3">טלפון</th>
+                    <th className="px-3">אימייל</th>
+                    <th className="px-3">קמפוס</th>
+                    <th className="px-3">מחלקה</th>
+                    <th className="px-3">עיר</th>
+                    <th className="px-3">מקור הגעה</th>
+                    <th className="px-3">נקבע על ידי</th>
                     <th className="px-3">תוצאה</th>
                     <th className="px-3">הגיע</th>
                     <th className="px-3">הערות</th>
@@ -1176,8 +1308,9 @@ export default function ConsultationPage() {
                     <th className="px-3">פעולות</th>
                   </tr>
                 </thead>
+
                 <tbody>
-                  {consultations.map((item) => (
+                  {filteredConsultations.map((item) => (
                     <tr
                       key={item.id}
                       className="rounded-xl bg-white/[0.04] ring-1 ring-white/10"
@@ -1186,6 +1319,74 @@ export default function ConsultationPage() {
                         <div className="inline-flex items-center gap-2">
                           <CalendarDays size={14} className="text-sky-300" />
                           <span>{formatDateTime(item.meetingDate)}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <UserRound size={14} className="text-white/50" />
+                          <span>
+                            {item.leadFullName || selectedLead?.fullName || "-"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <Phone size={14} className="text-white/50" />
+                          <span>{item.leadPhone || selectedLead?.phone || "-"}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <Mail size={14} className="text-white/50" />
+                          <span>{item.leadEmail || selectedLead?.email || "-"}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <Building2 size={14} className="text-white/50" />
+                          <span>
+                            {normalizeCampusForDisplay(
+                              item.leadCampus || selectedLead?.campus
+                            )}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <GraduationCap size={14} className="text-white/50" />
+                          <span>
+                            {item.leadDepartmentName ||
+                              selectedLead?.department?.name ||
+                              "-"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <MapPinned size={14} className="text-white/50" />
+                          <span>
+                            {item.leadCityName || selectedLead?.city?.town || "-"}
+                          </span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <Megaphone size={14} className="text-white/50" />
+                          <span>{item.leadSource || selectedLead?.source || "-"}</span>
+                        </div>
+                      </td>
+
+                      <td className="px-3 py-3.5">
+                        <div className="inline-flex items-center gap-2">
+                          <Users size={14} className="text-violet-300" />
+                          <span>{item.createdByUsername || "-"}</span>
                         </div>
                       </td>
 
@@ -1272,7 +1473,13 @@ export default function ConsultationPage() {
               <div className="rounded-xl bg-sky-500/12 p-2.5 text-sky-300">
                 <CalendarDays size={18} />
               </div>
-              <div className="text-lg font-bold">יומן פגישות ייעוץ</div>
+              <div>
+                <div className="text-lg font-bold">יומן פגישות ייעוץ</div>
+                <div className="mt-1 text-xs text-white/55">
+                  הסינון לפי קמפוס משפיע על רשימת הפגישות במערכת. היומן של
+                  Google מוצג כיומן חיצוני.
+                </div>
+              </div>
             </div>
           </div>
 

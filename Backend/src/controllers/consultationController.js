@@ -24,6 +24,17 @@ function normalizeCampus(value) {
   return cleaned;
 }
 
+function displayCampus(value) {
+  if (!value) return "-";
+
+  const cleaned = String(value).trim();
+
+  if (cleaned === "ASHDOD") return "אשדוד";
+  if (cleaned === "BEER_SHEVA") return "באר שבע";
+
+  return cleaned;
+}
+
 function normalizeSource(value) {
   if (!value) return null;
 
@@ -70,6 +81,43 @@ function parseArrived(value) {
   if (value === true || value === "true") return true;
   if (value === false || value === "false") return false;
   return null;
+}
+
+function buildConsultationSnapshotData(lead, createdByUsername = null) {
+  return {
+    leadFullName: lead?.fullName || null,
+    leadPhone: lead?.phone || null,
+    leadEmail: lead?.email || null,
+    leadCampus: displayCampus(lead?.campus),
+    leadDepartmentName: lead?.department?.name || null,
+    leadCityName: lead?.city?.town || null,
+    leadSource: lead?.source || null,
+    createdByUsername: normalizeNullableString(createdByUsername),
+  };
+}
+
+function mapConsultationRow(item) {
+  return {
+    id: item.id,
+    leadId: item.leadId,
+    meetingDate: item.meetingDate,
+    outcome: item.outcome,
+    arrived: item.arrived,
+    notes: item.notes,
+    googleEventId: item.googleEventId,
+    createdAt: item.createdAt,
+
+    leadFullName: item.leadFullName,
+    leadPhone: item.leadPhone,
+    leadEmail: item.leadEmail,
+    leadCampus: item.leadCampus,
+    leadDepartmentName: item.leadDepartmentName,
+    leadCityName: item.leadCityName,
+    leadSource: item.leadSource,
+
+    createdById: item.createdById,
+    createdByUsername: item.createdByUsername,
+  };
 }
 
 async function getConsultationFormOptions(req, res) {
@@ -187,15 +235,7 @@ async function searchLeads(req, res) {
           }
         : null,
       consultationsCount: lead.consultations.length,
-      consultations: lead.consultations.map((c) => ({
-        id: c.id,
-        meetingDate: c.meetingDate,
-        outcome: c.outcome,
-        arrived: c.arrived,
-        notes: c.notes,
-        createdAt: c.createdAt,
-        googleEventId: c.googleEventId,
-      })),
+      consultations: lead.consultations.map(mapConsultationRow),
     }));
 
     return res.json({
@@ -311,7 +351,14 @@ async function createLead(req, res) {
 
 async function createConsultation(req, res) {
   try {
-    const { leadId, meetingDate, outcome, arrived, notes } = req.body || {};
+    const {
+      leadId,
+      meetingDate,
+      outcome,
+      arrived,
+      notes,
+      createdByUsername,
+    } = req.body || {};
 
     if (!leadId || !meetingDate) {
       return res.status(400).json({
@@ -333,6 +380,28 @@ async function createConsultation(req, res) {
       });
     }
 
+    let createdById = null;
+    const cleanCreatedByUsername = normalizeNullableString(createdByUsername);
+
+    if (cleanCreatedByUsername) {
+      const user = await prisma.user.findUnique({
+        where: { username: cleanCreatedByUsername },
+        select: {
+          idNumber: true,
+          username: true,
+        },
+      });
+
+      if (user) {
+        createdById = user.idNumber;
+      }
+    }
+
+    const snapshotData = buildConsultationSnapshotData(
+      lead,
+      cleanCreatedByUsername
+    );
+
     let consultation = await prisma.consultation.create({
       data: {
         leadId: Number(leadId),
@@ -340,6 +409,26 @@ async function createConsultation(req, res) {
         outcome: normalizeNullableString(outcome),
         arrived: parseArrived(arrived),
         notes: normalizeNullableString(notes),
+
+        leadFullName: snapshotData.leadFullName,
+        leadPhone: snapshotData.leadPhone,
+        leadEmail: snapshotData.leadEmail,
+        leadCampus: snapshotData.leadCampus,
+        leadDepartmentName: snapshotData.leadDepartmentName,
+        leadCityName: snapshotData.leadCityName,
+        leadSource: snapshotData.leadSource,
+
+        createdById,
+        createdByUsername: snapshotData.createdByUsername,
+      },
+      include: {
+        lead: {
+          include: {
+            department: true,
+            city: true,
+          },
+        },
+        createdByUser: true,
       },
     });
 
@@ -365,13 +454,22 @@ async function createConsultation(req, res) {
         data: {
           googleEventId: syncResult.eventId,
         },
+        include: {
+          lead: {
+            include: {
+              department: true,
+              city: true,
+            },
+          },
+          createdByUser: true,
+        },
       });
     }
 
     return res.status(201).json({
       ok: true,
       message: "פגישת הייעוץ נוצרה בהצלחה",
-      consultation,
+      consultation: mapConsultationRow(consultation),
       syncResult,
     });
   } catch (error) {
@@ -392,6 +490,9 @@ async function getLeadConsultations(req, res) {
         consultations: {
           orderBy: {
             meetingDate: "desc",
+          },
+          include: {
+            createdByUser: true,
           },
         },
         department: true,
@@ -419,7 +520,7 @@ async function getLeadConsultations(req, res) {
         department: lead.department,
         city: lead.city,
       },
-      consultations: lead.consultations,
+      consultations: lead.consultations.map(mapConsultationRow),
     });
   } catch (error) {
     console.error("getLeadConsultations error:", error);
@@ -540,6 +641,7 @@ async function updateConsultation(req, res) {
             city: true,
           },
         },
+        createdByUser: true,
       },
     });
 
@@ -557,6 +659,11 @@ async function updateConsultation(req, res) {
       googleEventId: existing.googleEventId,
     };
 
+    const fallbackSnapshot = buildConsultationSnapshotData(
+      existing.lead,
+      existing.createdByUsername
+    );
+
     let updated = await prisma.consultation.update({
       where: { id: Number(id) },
       data: {
@@ -564,6 +671,17 @@ async function updateConsultation(req, res) {
         outcome: normalizeNullableString(outcome),
         arrived: parseArrived(arrived),
         notes: normalizeNullableString(notes),
+
+        leadFullName: existing.leadFullName || fallbackSnapshot.leadFullName,
+        leadPhone: existing.leadPhone || fallbackSnapshot.leadPhone,
+        leadEmail: existing.leadEmail || fallbackSnapshot.leadEmail,
+        leadCampus: existing.leadCampus || fallbackSnapshot.leadCampus,
+        leadDepartmentName:
+          existing.leadDepartmentName || fallbackSnapshot.leadDepartmentName,
+        leadCityName: existing.leadCityName || fallbackSnapshot.leadCityName,
+        leadSource: existing.leadSource || fallbackSnapshot.leadSource,
+        createdByUsername:
+          existing.createdByUsername || fallbackSnapshot.createdByUsername,
       },
       include: {
         lead: {
@@ -572,6 +690,7 @@ async function updateConsultation(req, res) {
             city: true,
           },
         },
+        createdByUser: true,
       },
     });
 
@@ -605,6 +724,7 @@ async function updateConsultation(req, res) {
               city: true,
             },
           },
+          createdByUser: true,
         },
       });
     }
@@ -612,7 +732,7 @@ async function updateConsultation(req, res) {
     return res.json({
       ok: true,
       message: "פגישת הייעוץ עודכנה בהצלחה",
-      consultation: updated,
+      consultation: mapConsultationRow(updated),
       syncResult,
     });
   } catch (error) {

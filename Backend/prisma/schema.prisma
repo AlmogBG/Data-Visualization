@@ -16,6 +16,7 @@ model User {
   createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
 
   password   Password?
+  consultationsCreated Consultation[] @relation("ConsultationCreatedBy")
 
   @@map("users")
 }
@@ -78,7 +79,19 @@ model Consultation {
   googleEventId String?   @map("google_event_id")
   createdAt     DateTime  @default(now()) @map("created_at")
 
-  lead          Lead      @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  leadFullName       String? @map("lead_full_name")
+  leadPhone          String? @map("lead_phone")
+  leadEmail          String? @map("lead_email")
+  leadCampus         String? @map("lead_campus")
+  leadDepartmentName String? @map("lead_department_name")
+  leadCityName       String? @map("lead_city_name")
+  leadSource         String? @map("lead_source")
+
+  createdById       String? @map("created_by_id") @db.VarChar(20)
+  createdByUsername String? @map("created_by_username") @db.VarChar(100)
+
+  lead              Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdByUser     User?  @relation("ConsultationCreatedBy", fields: [createdById], references: [idNumber], onDelete: SetNull)
 
   @@map("consultations")
 }
