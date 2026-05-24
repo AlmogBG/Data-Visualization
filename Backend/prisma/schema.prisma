@@ -95,3 +95,12 @@ model Consultation {
 
   @@map("consultations")
 }
+
+model SecurityLog {
+  id        Int      @id @default(autoincrement())
+  ipAddress String   // כתובת ה-IP
+  reason    String   // סיבת החסימה
+  createdAt DateTime @default(now()) // Timestamp שנוצר אוטומטית
+
+  @@map("security_logs") 
+}

@@ -2,6 +2,8 @@ require("dotenv").config();
 
 const express = require("express");
 const cors = require("cors");
+const rateLimit = require("express-rate-limit");
+const prisma = require("./src/config/db");
 
 const authRoutes = require("./src/routes/authRoutes");
 const consultationRoutes = require("./src/routes/consultationRoutes");
@@ -66,6 +68,36 @@ app.get("/api/home/summary", getHomeSummary);
 
 app.use("/api/auth", authRoutes);
 app.use("/auth", authRoutes);
+
+const rateLimit = require("express-rate-limit");
+const apiLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // חלון זמן של 15 דקות
+  max: 100, // הגבלה של 100 בקשות לכל כתובת IP 
+  standardHeaders: true, 
+  legacyHeaders: false, 
+  handler: async (req, res, next, options) => {
+    try {
+      // תיעוד הבקשה החסומה במסד הנתונים
+      await prisma.securityLog.create({
+        data: {
+          ipAddress: req.ip || req.connection.remoteAddress || "Unknown IP",
+          reason: `General API rate limit exceeded on path: ${req.originalUrl}`, // סיבת החסימה
+        },
+      });
+      console.warn(`[Security Log] Blocked general request from IP: ${req.ip}`);
+    } catch (error) {
+      console.error("Failed to save security log:", error);
+    }
+
+    res.status(429).json({
+      success: false,
+      message: "נשלחו יותר מדי בקשות מכתובת ה-IP שלך. אנא נסה שוב בעוד 15 דקות.",
+    });
+  },
+});
+
+app.use("/api", apiLimiter);
+app.use("/auth", apiLimiter);
 app.use("/api", consultationRoutes);
 
 app.get("/api/stats", (req, res) => {
