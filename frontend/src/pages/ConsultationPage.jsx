@@ -337,6 +337,7 @@ export default function ConsultationPage() {
   const isExistingLead = !!selectedLead?.id;
 
   async function refreshLeadConsultations(leadId) {
+    try {
     const data = await getLeadConsultations(leadId);
 
     setSelectedLead(data.lead);
@@ -354,6 +355,10 @@ export default function ConsultationPage() {
         : "",
       cityId: data.lead?.city?.id ? String(data.lead.city.id) : "",
     });
+    } catch (error) {
+        console.error("Error refreshing lead consultations:", error);
+        alert(error.message || "שגיאה ברענון נתוני הפגישות");
+      }
   }
 
   function refreshCalendarIframe() {
