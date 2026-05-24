@@ -109,6 +109,7 @@ function CustomXAxisTick({ x, y, payload }) {
   const text = payload?.value ?? "";
   const words = String(text).split(" ");
   const mid = Math.ceil(words.length / 2);
+
   const lines = [
     words.slice(0, mid).join(" "),
     words.slice(mid).join(" "),
@@ -179,8 +180,6 @@ export default function Report3() {
 
   const [activeTown, setActiveTown] = useState(null);
   const [hoveredTown, setHoveredTown] = useState(null);
-
-  const googleMapsApiKey = process.env.REACT_APP_GOOGLE_MAPS_API_KEY;
 
   useEffect(() => {
     const token =
@@ -320,7 +319,10 @@ export default function Report3() {
 
   const campusLabel =
     campuses.find((item) => item.key === campus)?.label ?? "כל הקמפוסים";
-  const areaLabel = areas.find((item) => item.key === area)?.label ?? "בחר הכל";
+
+  const areaLabel =
+    areas.find((item) => item.key === area)?.label ?? "בחר הכל";
+
   const departmentLabel = department === "ALL" ? "כל המחלקות" : department;
 
   const primarySeriesLabel = `נרשמים • ${campusLabel} • ${departmentLabel} • ${areaLabel}`;
@@ -455,6 +457,7 @@ export default function Report3() {
                     }}
                     onClick={(state) => {
                       const clickedTown = state?.activeLabel;
+
                       if (clickedTown) {
                         setActiveTown(clickedTown);
                       }
@@ -529,7 +532,6 @@ export default function Report3() {
                   points={visibleRows}
                   activeTown={activeTown}
                   onSelectTown={setActiveTown}
-                  googleMapsApiKey={googleMapsApiKey}
                 />
               </div>
             </div>
