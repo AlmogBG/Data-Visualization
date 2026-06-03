@@ -5,10 +5,10 @@
   "scripts": {
     "dev": "nodemon index.js",
     "start": "node index.js",
-    "start:test": "PORT=5001 node index.js",
     "seed": "node prisma/seed.js",
     "prisma:generate": "prisma generate",
-    "test": "TEST_BASE_URL=http://127.0.0.1:5001 node tests/apiSmokeTest.js"
+    "test": "node tests/runApiTestsWithServer.js",
+    "test:api": "node tests/runApiTestsWithServer.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
