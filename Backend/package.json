@@ -8,7 +8,7 @@
     "start:test": "PORT=5001 node index.js",
     "seed": "node prisma/seed.js",
     "prisma:generate": "prisma generate",
-    "test:api": "TEST_BASE_URL=http://127.0.0.1:5001 node tests/apiSmokeTest.js"
+    "test": "TEST_BASE_URL=http://127.0.0.1:5001 node tests/apiSmokeTest.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
