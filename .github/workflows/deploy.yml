@@ -42,8 +42,8 @@ jobs:
             echo "=== Generate Prisma Client ==="
             npx prisma generate
 
-            echo "=== Apply Prisma migrations ==="
-            npx prisma migrate deploy
+            echo "=== Run Backend API tests ==="
+            npm test
 
             echo "=== Restart Backend with PM2 ==="
             pm2 restart data-visualization-backend || pm2 start index.js --name data-visualization-backend
@@ -51,6 +51,9 @@ jobs:
             echo "=== Install Frontend dependencies ==="
             cd ~/Data-Visualization/frontend
             npm install
+
+            echo "=== Run Frontend tests ==="
+            npm test -- --watchAll=false
 
             echo "=== Build Frontend ==="
             npm run build
