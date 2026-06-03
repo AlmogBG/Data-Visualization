@@ -18,17 +18,47 @@ jobs:
           password: ${{ secrets.SERVER_PASSWORD }}
           port: ${{ secrets.SERVER_PORT }}
           script: |
-            cd ~/Data-Visualization
-            git pull origin main
+            set -e
 
-            cd Backend
+            echo "=== Go to project folder ==="
+            cd ~/Data-Visualization
+
+            echo "=== Show current server commit before update ==="
+            git log --oneline -3 || true
+
+            echo "=== Fetch latest code from GitHub ==="
+            git fetch origin main
+
+            echo "=== Force server code to match origin/main ==="
+            git reset --hard origin/main
+
+            echo "=== Show current server commit after update ==="
+            git log --oneline -3
+
+            echo "=== Install Backend dependencies ==="
+            cd ~/Data-Visualization/Backend
             npm install
+
+            echo "=== Generate Prisma Client ==="
             npx prisma generate
+
+            echo "=== Apply Prisma migrations ==="
             npx prisma migrate deploy
+
+            echo "=== Restart Backend with PM2 ==="
             pm2 restart data-visualization-backend || pm2 start index.js --name data-visualization-backend
 
-            cd ../frontend
+            echo "=== Install Frontend dependencies ==="
+            cd ~/Data-Visualization/frontend
             npm install
+
+            echo "=== Build Frontend ==="
             npm run build
-            pm2 restart data-visualization-frontend || pm2 serve build 3000 --name "data-visualization-frontend" --spa
-            
+
+            echo "=== Restart Frontend with PM2 ==="
+            pm2 restart data-visualization-frontend || pm2 serve build 3000 --name data-visualization-frontend --spa
+
+            echo "=== Save PM2 process list ==="
+            pm2 save
+
+            echo "=== Deployment completed successfully ==="
