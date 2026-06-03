@@ -3,12 +3,11 @@ require("dotenv").config();
 const express = require("express");
 const cors = require("cors");
 const rateLimit = require("express-rate-limit");
-const prisma = require("./src/config/db");
 
 const authRoutes = require("./src/routes/authRoutes");
 const consultationRoutes = require("./src/routes/consultationRoutes");
+const statsRoutes = require("./src/routes/statsRoutes");
 
-const { getLeadsByCity } = require("./src/controllers/statsController");
 const { getHomeSummary } = require("./src/controllers/homeController");
 const { getReport1Comparison } = require("./src/controllers/report1Controller");
 const { getReport2Comparison } = require("./src/controllers/report2Controller");
@@ -27,29 +26,20 @@ const defaultAllowedOrigins = [
   "http://188.245.161.194:3000",
 ];
 
-const envAllowedOrigins = process.env.FRONTEND_ORIGIN
-  ? process.env.FRONTEND_ORIGIN.split(",")
-      .map((origin) => origin.trim())
-      .filter(Boolean)
+const envAllowedOrigins = process.env.ALLOWED_ORIGINS
+  ? process.env.ALLOWED_ORIGINS.split(",").map((origin) => origin.trim())
   : [];
 
-const allowedOrigins = Array.from(
-  new Set([...defaultAllowedOrigins, ...envAllowedOrigins])
-);
+const allowedOrigins = [...defaultAllowedOrigins, ...envAllowedOrigins];
 
 app.use(
   cors({
-    origin(origin, callback) {
-      if (!origin) {
+    origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
         return callback(null, true);
       }
 
-      if (allowedOrigins.includes(origin)) {
-        return callback(null, true);
-      }
-
-      console.warn(`CORS blocked origin: ${origin}`);
-      return callback(new Error(`CORS blocked origin: ${origin}`));
+      return callback(new Error("Not allowed by CORS"));
     },
     credentials: true,
   })
@@ -57,57 +47,48 @@ app.use(
 
 app.use(express.json());
 
-app.get("/health", (req, res) => {
-  return res.json({
-    ok: true,
-    message: "Server is running",
-  });
-});
+function isLocalhostRequest(req) {
+  const ip = req.ip || req.connection?.remoteAddress || "";
 
-app.get("/api/home/summary", getHomeSummary);
+  return (
+    ip === "127.0.0.1" ||
+    ip === "::1" ||
+    ip === "::ffff:127.0.0.1" ||
+    ip.includes("127.0.0.1")
+  );
+}
 
-app.use("/api/auth", authRoutes);
-app.use("/auth", authRoutes);
-
-const rateLimit = require("express-rate-limit");
 const apiLimiter = rateLimit({
-  windowMs: 15 * 60 * 1000, // חלון זמן של 15 דקות
-  max: 100, // הגבלה של 100 בקשות לכל כתובת IP 
-  standardHeaders: true, 
-  legacyHeaders: false, 
-  handler: async (req, res, next, options) => {
-    try {
-      // תיעוד הבקשה החסומה במסד הנתונים
-      await prisma.securityLog.create({
-        data: {
-          ipAddress: req.ip || req.connection.remoteAddress || "Unknown IP",
-          reason: `General API rate limit exceeded on path: ${req.originalUrl}`, // סיבת החסימה
-        },
-      });
-      console.warn(`[Security Log] Blocked general request from IP: ${req.ip}`);
-    } catch (error) {
-      console.error("Failed to save security log:", error);
-    }
+  windowMs: 15 * 60 * 1000,
+  max: 300,
+  standardHeaders: true,
+  legacyHeaders: false,
+  statusCode: 429,
+  message: {
+    message: "Too many requests, please try again later.",
+  },
 
-    res.status(429).json({
-      success: false,
-      message: "נשלחו יותר מדי בקשות מכתובת ה-IP שלך. אנא נסה שוב בעוד 15 דקות.",
-    });
+  // בפיתוח ובבדיקות מקומיות לא חוסמים localhost,
+  // כדי לאפשר להריץ Smoke Tests בלי Rate Limit.
+  skip: (req) => {
+    return process.env.NODE_ENV !== "production" && isLocalhostRequest(req);
   },
 });
 
 app.use("/api", apiLimiter);
-app.use("/auth", apiLimiter);
-app.use("/api", consultationRoutes);
 
-app.get("/api/stats", (req, res) => {
-  return res.json({
-    ok: true,
-    message: "Stats routes working",
+app.get("/health", (req, res) => {
+  res.json({
+    status: "ok",
+    message: "Backend is running",
   });
 });
 
-app.get("/api/stats/cities", getLeadsByCity);
+app.use("/api/auth", authRoutes);
+app.use("/api", consultationRoutes);
+app.use("/api/stats", statsRoutes);
+
+app.get("/api/home/summary", getHomeSummary);
 
 app.get("/api/report1/comparison", getReport1Comparison);
 app.get("/api/report2/comparison", getReport2Comparison);
@@ -117,23 +98,7 @@ app.get("/api/report4/outcomes", getReport4Outcomes);
 
 app.get("/api/report5/media", getReport5Media);
 
-app.use((req, res) => {
-  return res.status(404).json({
-    message: "Route not found",
-    path: req.originalUrl,
-  });
-});
-
-app.use((err, req, res, next) => {
-  console.error("Server error:", err.message);
-
-  return res.status(500).json({
-    message: "Internal server error",
-    error: process.env.NODE_ENV === "development" ? err.message : undefined,
-  });
-});
-
-app.listen(PORT, "0.0.0.0", () => {
+app.listen(PORT, () => {
   console.log(`Server running on port ${PORT}`);
   console.log("Allowed frontend origins:", allowedOrigins);
   console.log("Available routes:");
@@ -148,12 +113,12 @@ app.listen(PORT, "0.0.0.0", () => {
   console.log("GET    /api/consultations/lead/:leadId");
   console.log("PUT    /api/consultations/:id");
   console.log("DELETE /api/consultations/:id");
+  console.log("GET    /api/stats");
   console.log("GET    /api/stats/cities");
+  console.log("GET    /api/stats/anomalies");
   console.log("GET    /api/report1/comparison");
   console.log("GET    /api/report2/comparison");
   console.log("GET    /api/report4/monthly");
   console.log("GET    /api/report4/outcomes");
   console.log("GET    /api/report5/media");
-
 });
-
