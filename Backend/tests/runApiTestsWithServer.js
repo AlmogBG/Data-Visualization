@@ -1,120 +1,335 @@
-const { spawn } = require("child_process");
+"use strict";
+
+require("dotenv").config();
+
+const {
+  spawn,
+} = require("child_process");
+
+const {
+  once,
+} = require("events");
+
 const http = require("http");
 
-const TEST_PORT = process.env.TEST_PORT || "5001";
-const TEST_BASE_URL = `http://127.0.0.1:${TEST_PORT}`;
+const {
+  PrismaClient,
+} = require("@prisma/client");
 
-function wait(ms) {
-  return new Promise((resolve) => setTimeout(resolve, ms));
+const TEST_PORT =
+  process.env.TEST_PORT ||
+  "5001";
+
+const TEST_BASE_URL =
+  `http://127.0.0.1:${TEST_PORT}`;
+
+const TEST_JWT_SECRET =
+  "deployment-integration-test-secret-not-for-production";
+
+let serverProcess = null;
+
+function wait(milliseconds) {
+  return new Promise(
+    (resolve) => {
+      setTimeout(
+        resolve,
+        milliseconds
+      );
+    }
+  );
+}
+
+async function verifyDatabaseConnection() {
+  const prisma =
+    new PrismaClient();
+
+  try {
+    await prisma.$queryRaw`
+      SELECT 1
+    `;
+
+    console.log(
+      "Database connection check passed"
+    );
+  } catch (error) {
+    throw new Error(
+      `Database connection check failed: ${error.message}`
+    );
+  } finally {
+    await prisma.$disconnect();
+  }
 }
 
 function checkHealth() {
-  return new Promise((resolve) => {
-    const req = http.get(`${TEST_BASE_URL}/health`, (res) => {
-      let body = "";
+  return new Promise(
+    (resolve) => {
+      const request =
+        http.get(
+          `${TEST_BASE_URL}/health`,
 
-      res.on("data", (chunk) => {
-        body += chunk;
-      });
+          (response) => {
+            let body = "";
 
-      res.on("end", () => {
-        resolve(res.statusCode === 200 && body.includes("ok"));
-      });
-    });
+            response.on(
+              "data",
+              (chunk) => {
+                body += chunk;
+              }
+            );
 
-    req.on("error", () => {
-      resolve(false);
-    });
+            response.on(
+              "end",
+              () => {
+                resolve(
+                  response.statusCode ===
+                    200 &&
+                    body.includes(
+                      "ok"
+                    )
+                );
+              }
+            );
+          }
+        );
 
-    req.setTimeout(1000, () => {
-      req.destroy();
-      resolve(false);
-    });
-  });
+      request.on(
+        "error",
+        () => {
+          resolve(false);
+        }
+      );
+
+      request.setTimeout(
+        1000,
+        () => {
+          request.destroy();
+          resolve(false);
+        }
+      );
+    }
+  );
 }
 
 async function waitForServer() {
   const maxAttempts = 30;
 
-  for (let attempt = 1; attempt <= maxAttempts; attempt++) {
-    const ready = await checkHealth();
+  for (
+    let attempt = 1;
+    attempt <= maxAttempts;
+    attempt += 1
+  ) {
+    const ready =
+      await checkHealth();
 
     if (ready) {
-      console.log(`Test server is ready on ${TEST_BASE_URL}`);
+      console.log(
+        `Temporary backend is ready on ${TEST_BASE_URL}`
+      );
+
       return;
     }
 
-    console.log(`Waiting for test server... attempt ${attempt}/${maxAttempts}`);
+    console.log(
+      `Waiting for temporary backend: ${attempt}/${maxAttempts}`
+    );
+
     await wait(1000);
   }
 
-  throw new Error("Test server did not start in time");
+  throw new Error(
+    "Temporary backend did not become ready"
+  );
 }
 
 function runApiSmokeTests() {
-  return new Promise((resolve, reject) => {
-    const testProcess = spawn("node", ["tests/apiSmokeTest.js"], {
-      stdio: "inherit",
-      env: {
-        ...process.env,
-        TEST_BASE_URL,
-      },
-    });
+  return new Promise(
+    (resolve, reject) => {
+      const testProcess =
+        spawn(
+          "node",
+          [
+            "tests/apiSmokeTest.js",
+          ],
+          {
+            stdio: "inherit",
 
-    testProcess.on("close", (code) => {
-      if (code === 0) {
-        resolve();
-      } else {
-        reject(new Error(`API smoke tests failed with exit code ${code}`));
-      }
-    });
-  });
+            env: {
+              ...process.env,
+
+              NODE_ENV:
+                "integration-test",
+
+              TEST_BASE_URL,
+
+              JWT_SECRET:
+                TEST_JWT_SECRET,
+            },
+          }
+        );
+
+      testProcess.on(
+        "error",
+        reject
+      );
+
+      testProcess.on(
+        "close",
+        (exitCode) => {
+          if (exitCode === 0) {
+            resolve();
+            return;
+          }
+
+          reject(
+            new Error(
+              `API integration tests exited with code ${exitCode}`
+            )
+          );
+        }
+      );
+    }
+  );
+}
+
+async function stopServer() {
+  if (
+    !serverProcess ||
+    serverProcess.killed
+  ) {
+    return;
+  }
+
+  serverProcess.kill(
+    "SIGTERM"
+  );
+
+  const closed =
+    once(
+      serverProcess,
+      "close"
+    );
+
+  await Promise.race([
+    closed,
+    wait(3000),
+  ]);
+
+  if (
+    serverProcess.exitCode ===
+      null &&
+    !serverProcess.killed
+  ) {
+    serverProcess.kill(
+      "SIGKILL"
+    );
+  }
 }
 
 async function main() {
-  console.log("Starting temporary backend test server...");
-  console.log(`PORT=${TEST_PORT}`);
-  console.log(`TEST_BASE_URL=${TEST_BASE_URL}`);
+  console.log(
+    "Starting deployment integration tests"
+  );
 
-  const serverProcess = spawn("node", ["index.js"], {
-    stdio: "inherit",
-    env: {
-      ...process.env,
-      PORT: TEST_PORT,
-      NODE_ENV: "test",
-    },
-  });
+  console.log(
+    `Temporary port: ${TEST_PORT}`
+  );
 
-  function stopServer() {
-    if (serverProcess && !serverProcess.killed) {
-      serverProcess.kill("SIGTERM");
+  console.log(
+    `Temporary URL: ${TEST_BASE_URL}`
+  );
+
+  /*
+   * לפני הפעלת השרת הזמני מוודאים
+   * שמסד הנתונים של סביבת הפריסה זמין.
+   */
+  await verifyDatabaseConnection();
+
+  serverProcess =
+    spawn(
+      "node",
+      ["index.js"],
+      {
+        stdio: "inherit",
+
+        env: {
+          ...process.env,
+
+          PORT: TEST_PORT,
+
+          NODE_ENV:
+            "integration-test",
+
+          JWT_SECRET:
+            TEST_JWT_SECRET,
+        },
+      }
+    );
+
+  serverProcess.on(
+    "error",
+    (error) => {
+      console.error(
+        "Temporary backend process error:",
+        error.message
+      );
     }
-  }
+  );
 
-  process.on("SIGINT", () => {
-    stopServer();
-    process.exit(1);
-  });
+  const terminate =
+    async () => {
+      await stopServer();
+      process.exit(1);
+    };
 
-  process.on("SIGTERM", () => {
-    stopServer();
-    process.exit(1);
-  });
+  process.once(
+    "SIGINT",
+    terminate
+  );
+
+  process.once(
+    "SIGTERM",
+    terminate
+  );
 
   try {
     await waitForServer();
+
     await runApiSmokeTests();
 
-    console.log("All API tests passed successfully.");
-    stopServer();
+    console.log(
+      "All deployment integration tests passed"
+    );
+
+    await stopServer();
+
     process.exit(0);
   } catch (error) {
-    console.error("Test run failed:");
-    console.error(error.message);
+    console.error(
+      "Deployment integration tests failed"
+    );
 
-    stopServer();
+    console.error(
+      error.message
+    );
+
+    await stopServer();
+
     process.exit(1);
   }
 }
 
-main();
+main().catch(
+  async (error) => {
+    console.error(
+      "Unexpected test runner error:"
+    );
+
+    console.error(
+      error.message
+    );
+
+    await stopServer();
+
+    process.exit(1);
+  }
+);

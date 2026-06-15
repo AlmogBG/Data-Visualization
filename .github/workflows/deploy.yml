@@ -43,7 +43,7 @@ jobs:
             npx prisma generate
 
             echo "=== Run Backend API tests ==="
-            npm test
+            npm run test:deploy
 
             echo "=== Restart Backend with PM2 ==="
             pm2 restart data-visualization-backend || pm2 start index.js --name data-visualization-backend
