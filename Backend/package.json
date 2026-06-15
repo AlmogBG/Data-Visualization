@@ -10,7 +10,8 @@
     "test": "node --test tests/securityMiddleware.test.js",
     "test:api": "node tests/runApiTestsWithServer.js",
     "test:integration": "node tests/runApiTestsWithServer.js",
-    "test:deploy": "npm test && npm run test:integration"
+    "test:deploy": "npm test && npm run test:integration",
+    "test:load": "node tests/loadTest.js"
   },
   "dependencies": {
     "@prisma/client": "^6.19.2",
