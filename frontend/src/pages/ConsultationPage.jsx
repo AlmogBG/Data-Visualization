@@ -69,8 +69,7 @@ const outcomeLabelMap = {
   OTHER: "אחר",
 };
 
-const GOOGLE_CALENDAR_EMBED_BASE_URL =
-  "https://calendar.google.com/calendar/embed?src=datavisualization4222%40gmail.com&ctz=Asia%2FJerusalem&mode=MONTH&showTitle=0&showPrint=0&showCalendars=0&showTabs=1&showTz=0&hl=en";
+const GOOGLE_CALENDAR_EMBED_BASE_URL ="https://calendar.google.com/calendar/embed?src=datavisualization4222%40gmail.com&ctz=Asia%2FJerusalem" 
 
 function buildDateTimeValue(datePart, timePart) {
   if (!datePart || !timePart) return "";
