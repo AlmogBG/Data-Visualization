@@ -1,5 +1,4 @@
 const express = require("express");
-const router = express.Router();
 
 const {
   getConsultationFormOptions,
@@ -12,14 +11,72 @@ const {
   deleteConsultation,
 } = require("../controllers/consultationController");
 
-router.get("/form/options", getConsultationFormOptions);
-router.get("/leads/search", searchLeads);
-router.post("/leads", createLead);
-router.put("/leads/:id", updateLead);
+const {
+  authenticateToken,
+  authorizeRoles,
+} = require("../middleware/authMiddleware");
 
-router.post("/consultations", createConsultation);
-router.get("/consultations/lead/:leadId", getLeadConsultations);
-router.put("/consultations/:id", updateConsultation);
-router.delete("/consultations/:id", deleteConsultation);
+const router = express.Router();
+
+const OPERATIONAL_ROLES = [
+  "Manager",
+  "Management Employee",
+];
+
+router.get(
+  "/form/options",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  getConsultationFormOptions
+);
+
+router.get(
+  "/leads/search",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  searchLeads
+);
+
+router.post(
+  "/leads",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  createLead
+);
+
+router.put(
+  "/leads/:id",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  updateLead
+);
+
+router.post(
+  "/consultations",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  createConsultation
+);
+
+router.get(
+  "/consultations/lead/:leadId",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  getLeadConsultations
+);
+
+router.put(
+  "/consultations/:id",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  updateConsultation
+);
+
+router.delete(
+  "/consultations/:id",
+  authenticateToken,
+  authorizeRoles(...OPERATIONAL_ROLES),
+  deleteConsultation
+);
 
 module.exports = router;

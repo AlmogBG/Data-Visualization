@@ -1,17 +1,55 @@
-import React, { Suspense, lazy } from "react";
-import { Routes, Route, Navigate } from "react-router-dom";
+import React, {
+  Suspense,
+  lazy,
+} from "react";
+
+import {
+  Routes,
+  Route,
+  Navigate,
+} from "react-router-dom";
 
 import LoginPage from "./pages/LoginPage";
+
 import ProtectedRoute from "./components/ProtectedRoute";
 
-const HomePage = lazy(() => import("./pages/HomePage"));
-const EditProfilePage = lazy(() => import("./pages/EditProfilePage"));
-const ConsultationPage = lazy(() => import("./pages/ConsultationPage"));
-const Report1 = lazy(() => import("./pages/Report1"));
-const Report2 = lazy(() => import("./pages/Report2"));
-const Report3 = lazy(() => import("./pages/Report3"));
-const Report4 = lazy(() => import("./pages/Report4"));
-const Report5 = lazy(() => import("./pages/Report5"));
+import RoleProtectedRoute from "./components/RoleProtectedRoute";
+
+const HomePage = lazy(() =>
+  import("./pages/HomePage")
+);
+
+const EditProfilePage = lazy(() =>
+  import("./pages/EditProfilePage")
+);
+
+const ConsultationPage = lazy(() =>
+  import("./pages/ConsultationPage")
+);
+
+const Report1 = lazy(() =>
+  import("./pages/Report1")
+);
+
+const Report2 = lazy(() =>
+  import("./pages/Report2")
+);
+
+const Report3 = lazy(() =>
+  import("./pages/Report3")
+);
+
+const Report4 = lazy(() =>
+  import("./pages/Report4")
+);
+
+const Report5 = lazy(() =>
+  import("./pages/Report5")
+);
+
+const SecurityDashboard = lazy(() =>
+  import("./pages/SecurityDashboard")
+);
 
 function PageLoader() {
   return (
@@ -31,12 +69,36 @@ function PageLoader() {
   );
 }
 
+function ManagerRoute({ children }) {
+  return (
+    <RoleProtectedRoute
+      allowedRoles={["Manager"]}
+    >
+      {children}
+    </RoleProtectedRoute>
+  );
+}
+
 export default function App() {
   return (
-    <Suspense fallback={<PageLoader />}>
+    <Suspense
+      fallback={<PageLoader />}
+    >
       <Routes>
-        <Route path="/" element={<Navigate to="/login" replace />} />
-        <Route path="/login" element={<LoginPage />} />
+        <Route
+          path="/"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
+
+        <Route
+          path="/login"
+          element={<LoginPage />}
+        />
 
         <Route
           path="/home"
@@ -68,49 +130,66 @@ export default function App() {
         <Route
           path="/report1"
           element={
-            <ProtectedRoute>
+            <ManagerRoute>
               <Report1 />
-            </ProtectedRoute>
+            </ManagerRoute>
           }
         />
 
         <Route
           path="/report2"
           element={
-            <ProtectedRoute>
+            <ManagerRoute>
               <Report2 />
-            </ProtectedRoute>
+            </ManagerRoute>
           }
         />
 
         <Route
           path="/report3"
           element={
-            <ProtectedRoute>
+            <ManagerRoute>
               <Report3 />
-            </ProtectedRoute>
+            </ManagerRoute>
           }
         />
 
         <Route
           path="/report4"
           element={
-            <ProtectedRoute>
+            <ManagerRoute>
               <Report4 />
-            </ProtectedRoute>
+            </ManagerRoute>
           }
         />
 
         <Route
           path="/report5"
           element={
-            <ProtectedRoute>
+            <ManagerRoute>
               <Report5 />
-            </ProtectedRoute>
+            </ManagerRoute>
           }
         />
 
-        <Route path="*" element={<Navigate to="/login" replace />} />
+        <Route
+          path="/security"
+          element={
+            <ManagerRoute>
+              <SecurityDashboard />
+            </ManagerRoute>
+          }
+        />
+
+        <Route
+          path="*"
+          element={
+            <Navigate
+              to="/login"
+              replace
+            />
+          }
+        />
       </Routes>
     </Suspense>
   );

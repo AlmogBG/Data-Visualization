@@ -1,5 +1,10 @@
 import React from "react";
-import { Link, useLocation } from "react-router-dom";
+
+import {
+  Link,
+  useLocation,
+} from "react-router-dom";
+
 import {
   Home,
   BarChart3,
@@ -7,22 +12,121 @@ import {
   MapPinned,
   LineChart,
   FileText,
+  ShieldCheck,
   X,
 } from "lucide-react";
 
 const menuItems = [
-  { label: "דף הבית", to: "/home", Icon: Home },
-  { label: "דוח 1 – השוואת נרשמים לפי חודשים / שנים", to: "/report1", Icon: TrendingUp },
-  { label: "דוח 2 – ביקושי המחלקות של הנרשמים למכללה בהשוואה לשנים האחרונות", to: "/report2", Icon: BarChart3 },
-  { label: "דוח 3 – שמות היישובים של הנרשמים לשנה״ל בחודש זה על פי המחלקה וקמפוס", to: "/report3", Icon: MapPinned },
-  { label: "דוח 4 – ניתוח הגעה למפגש ייעוץ", to: "/report4", Icon: LineChart },
-  { label: "דוח 5 - ניתוח לידים ומידה", to: "/report5", Icon: FileText },
+  {
+    label: "דף הבית",
+    to: "/home",
+    Icon: Home,
+    managerOnly: false,
+  },
+  {
+    label:
+      "דוח 1 – השוואת נרשמים לפי חודשים / שנים",
+    to: "/report1",
+    Icon: TrendingUp,
+    managerOnly: true,
+  },
+  {
+    label:
+      "דוח 2 – ביקושי המחלקות של הנרשמים למכללה בהשוואה לשנים האחרונות",
+    to: "/report2",
+    Icon: BarChart3,
+    managerOnly: true,
+  },
+  {
+    label:
+      "דוח 3 – שמות היישובים של הנרשמים לשנה״ל בחודש זה על פי המחלקה וקמפוס",
+    to: "/report3",
+    Icon: MapPinned,
+    managerOnly: true,
+  },
+  {
+    label:
+      "דוח 4 – ניתוח הגעה למפגש ייעוץ",
+    to: "/report4",
+    Icon: LineChart,
+    managerOnly: true,
+  },
+  {
+    label:
+      "דוח 5 – ניתוח לידים ומדיה",
+    to: "/report5",
+    Icon: FileText,
+    managerOnly: true,
+  },
+  {
+    label:
+      "לוח אבטחה – SIEM Lite",
+    to: "/security",
+    Icon: ShieldCheck,
+    managerOnly: true,
+  },
 ];
 
-export default function Sidebar({ isOpen, onToggle }) {
-  const { pathname } = useLocation();
+function getStoredRole() {
+  const directRole =
+    localStorage.getItem(
+      "loggedInRole"
+    ) ||
+    sessionStorage.getItem(
+      "loggedInRole"
+    );
 
-  if (!isOpen) return null;
+  if (directRole) {
+    return directRole;
+  }
+
+  try {
+    const storedUser =
+      localStorage.getItem("user") ||
+      sessionStorage.getItem("user");
+
+    if (!storedUser) {
+      return "";
+    }
+
+    const parsedUser =
+      JSON.parse(storedUser);
+
+    return parsedUser?.role || "";
+  } catch (error) {
+    console.error(
+      "Failed to read the stored user role:",
+      error
+    );
+
+    return "";
+  }
+}
+
+export default function Sidebar({
+  isOpen,
+  onToggle,
+}) {
+  const { pathname } =
+    useLocation();
+
+  const role = getStoredRole();
+
+  const isManager =
+    role === "Manager";
+
+  const visibleMenuItems =
+    menuItems.filter((item) => {
+      if (!item.managerOnly) {
+        return true;
+      }
+
+      return isManager;
+    });
+
+  if (!isOpen) {
+    return null;
+  }
 
   return (
     <div className="fixed inset-0 z-50">
@@ -36,15 +140,21 @@ export default function Sidebar({ isOpen, onToggle }) {
           <div className="border-b border-white/10 px-5 py-4">
             <div className="flex items-start justify-between gap-4">
               <div>
-                <div className="text-lg font-bold">ניווט במערכת</div>
+                <div className="text-lg font-bold">
+                  ניווט במערכת
+                </div>
+
                 <div className="mt-1 text-sm text-white/55">
-                  מעבר בין דוחות ועמודים מרכזיים
+                  {isManager
+                    ? "מעבר בין דוחות, אבטחה ועמודים מרכזיים"
+                    : "מעבר בין עמודי המערכת"}
                 </div>
               </div>
 
               <button
+                type="button"
                 onClick={onToggle}
-                className="rounded-lg p-2 text-white/70 transition hover:bg-white/8 hover:text-white"
+                className="rounded-lg p-2 text-white/70 transition hover:bg-white/10 hover:text-white"
                 aria-label="סגירה"
               >
                 <X className="h-5 w-5" />
@@ -54,38 +164,47 @@ export default function Sidebar({ isOpen, onToggle }) {
 
           <div className="flex-1 overflow-y-auto px-3 py-4">
             <div className="space-y-1.5">
-              {menuItems.map(({ label, to, Icon }) => {
-                const active = pathname === to;
+              {visibleMenuItems.map(
+                ({
+                  label,
+                  to,
+                  Icon,
+                }) => {
+                  const active =
+                    pathname === to;
 
-                return (
-                  <Link
-                    key={to}
-                    to={to}
-                    onClick={onToggle}
-                    className={[
-                      "group flex items-start gap-3 rounded-xl px-3 py-3 transition",
-                      active
-                        ? "bg-sky-500/14 text-sky-100 ring-1 ring-sky-300/20"
-                        : "text-white/85 hover:bg-white/[0.05]",
-                    ].join(" ")}
-                  >
-                    <div
+                  return (
+                    <Link
+                      key={to}
+                      to={to}
+                      onClick={onToggle}
                       className={[
-                        "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 transition",
+                        "group flex items-start gap-3 rounded-xl px-3 py-3 transition",
                         active
-                          ? "bg-sky-500/12 text-sky-200 ring-sky-300/20"
-                          : "bg-white/[0.04] text-white/70 ring-white/10 group-hover:text-sky-200",
+                          ? "bg-sky-500/15 text-sky-100 ring-1 ring-sky-300/20"
+                          : "text-white/85 hover:bg-white/[0.05]",
                       ].join(" ")}
                     >
-                      <Icon className="h-[17px] w-[17px]" />
-                    </div>
+                      <div
+                        className={[
+                          "mt-0.5 flex h-9 w-9 shrink-0 items-center justify-center rounded-lg ring-1 transition",
+                          active
+                            ? "bg-sky-500/15 text-sky-200 ring-sky-300/20"
+                            : "bg-white/[0.04] text-white/70 ring-white/10 group-hover:text-sky-200",
+                        ].join(" ")}
+                      >
+                        <Icon className="h-[17px] w-[17px]" />
+                      </div>
 
-                    <div className="min-w-0 flex-1">
-                      <div className="text-sm font-medium leading-6">{label}</div>
-                    </div>
-                  </Link>
-                );
-              })}
+                      <div className="min-w-0 flex-1">
+                        <div className="text-sm font-medium leading-6">
+                          {label}
+                        </div>
+                      </div>
+                    </Link>
+                  );
+                }
+              )}
             </div>
           </div>
 

@@ -8,14 +8,14 @@ datasource db {
 }
 
 model User {
-  idNumber   String    @id @map("id_number") @db.VarChar(20)
-  username   String    @unique @db.VarChar(100)
-  fullName   String    @map("full_name") @db.VarChar(150)
-  email      String    @unique @db.VarChar(150)
-  role       String    @db.VarChar(50)
-  createdAt  DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
+  idNumber  String    @id @map("id_number") @db.VarChar(20)
+  username  String    @unique @db.VarChar(100)
+  fullName  String    @map("full_name") @db.VarChar(150)
+  email     String    @unique @db.VarChar(150)
+  role      String    @db.VarChar(50)
+  createdAt DateTime? @default(now()) @map("created_at") @db.Timestamp(6)
 
-  password   Password?
+  password             Password?
   consultationsCreated Consultation[] @relation("ConsultationCreatedBy")
 
   @@map("users")
@@ -26,45 +26,45 @@ model Password {
   passwordHash String    @map("password_hash")
   updatedAt    DateTime? @default(now()) @map("updated_at") @db.Timestamp(6)
 
-  user         User      @relation(fields: [idNumber], references: [idNumber], onDelete: Cascade)
+  user User @relation(fields: [idNumber], references: [idNumber], onDelete: Cascade)
 
   @@map("passwords")
 }
 
 model Department {
-  id     Int    @id @default(autoincrement())
-  name   String @unique
-  leads  Lead[]
+  id    Int    @id @default(autoincrement())
+  name  String @unique
+  leads Lead[]
 
   @@map("departments")
 }
 
 model City {
-  id      Int    @id @default(autoincrement())
-  town    String @unique
-  region  String
-  leads   Lead[]
+  id     Int    @id @default(autoincrement())
+  town   String @unique
+  region String
+  leads  Lead[]
 
   @@map("cities")
 }
 
 model Lead {
-  id             Int             @id @default(autoincrement())
-  fullName       String          @map("full_name")
-  phone          String?
-  email          String?
-  campus         String
-  area           String
-  status         String?
-  source         String?
-  createdAt      DateTime        @default(now()) @map("created_at")
+  id        Int      @id @default(autoincrement())
+  fullName  String   @map("full_name")
+  phone     String?
+  email     String?
+  campus    String
+  area      String
+  status    String?
+  source    String?
+  createdAt DateTime @default(now()) @map("created_at")
 
-  departmentId   Int             @map("department_id")
-  cityId         Int             @map("city_id")
+  departmentId Int @map("department_id")
+  cityId       Int @map("city_id")
 
-  department     Department      @relation(fields: [departmentId], references: [id])
-  city           City            @relation(fields: [cityId], references: [id])
-  consultations  Consultation[]
+  department    Department     @relation(fields: [departmentId], references: [id])
+  city          City           @relation(fields: [cityId], references: [id])
+  consultations Consultation[]
 
   @@map("leads")
 }
@@ -75,7 +75,7 @@ model Consultation {
   meetingDate   DateTime? @map("meeting_date")
   outcome       String?
   arrived       Boolean?
-  notes         String?   @map("notes")
+  notes         String?
   googleEventId String?   @map("google_event_id")
   createdAt     DateTime  @default(now()) @map("created_at")
 
@@ -90,17 +90,27 @@ model Consultation {
   createdById       String? @map("created_by_id") @db.VarChar(20)
   createdByUsername String? @map("created_by_username") @db.VarChar(100)
 
-  lead              Lead   @relation(fields: [leadId], references: [id], onDelete: Cascade)
-  createdByUser     User?  @relation("ConsultationCreatedBy", fields: [createdById], references: [idNumber], onDelete: SetNull)
+  lead          Lead  @relation(fields: [leadId], references: [id], onDelete: Cascade)
+  createdByUser User? @relation("ConsultationCreatedBy", fields: [createdById], references: [idNumber], onDelete: SetNull)
 
   @@map("consultations")
 }
 
 model SecurityLog {
-  id        Int      @id @default(autoincrement())
-  ipAddress String   // כתובת ה-IP
-  reason    String   // סיבת החסימה
-  createdAt DateTime @default(now()) // Timestamp שנוצר אוטומטית
+  id         Int      @id @default(autoincrement())
+  eventType  String   @default("UNKNOWN") @map("event_type") @db.VarChar(50)
+  ipAddress  String   @map("ip_address") @db.VarChar(64)
+  username   String?  @db.VarChar(100)
+  reason     String   @db.Text
+  route      String?  @db.VarChar(255)
+  method     String?  @db.VarChar(10)
+  statusCode Int?     @map("status_code")
+  blocked    Boolean  @default(false)
+  details    Json?    @db.JsonB
+  createdAt  DateTime @default(now()) @map("created_at") @db.Timestamp(6)
 
-  @@map("security_logs") 
+  @@index([createdAt], map: "security_logs_created_at_idx")
+  @@index([eventType], map: "security_logs_event_type_idx")
+  @@index([ipAddress], map: "security_logs_ip_address_idx")
+  @@map("security_logs")
 }

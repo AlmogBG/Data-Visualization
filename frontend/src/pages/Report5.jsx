@@ -1,5 +1,11 @@
-import React, { useEffect, useMemo, useState } from "react";
+import React, {
+  useEffect,
+  useMemo,
+  useState,
+} from "react";
+
 import { useNavigate } from "react-router-dom";
+
 import {
   ResponsiveContainer,
   PieChart,
@@ -8,34 +14,163 @@ import {
   Tooltip,
   Legend,
 } from "recharts";
+
 import Sidebar from "../components/Sidebar";
 import TopNavbar from "../components/TopNavbar";
 
 const API_BASE_URL =
-  process.env.REACT_APP_API_BASE_URL || "http://188.245.161.194:5000";
+  process.env.REACT_APP_API_BASE_URL ||
+  "http://localhost:5001";
 
 const campusOptions = [
-  { key: "ALL", label: "כל הקמפוסים" },
-  { key: "ASHDOD", label: "אשדוד" },
-  { key: "BEER_SHEVA", label: "באר שבע" },
+  {
+    key: "ALL",
+    label: "כל הקמפוסים",
+  },
+  {
+    key: "ASHDOD",
+    label: "אשדוד",
+  },
+  {
+    key: "BEER_SHEVA",
+    label: "באר שבע",
+  },
 ];
 
-const years = ["תשפ״ה", "תשפ״ד", "תשפ״ג", "תשפ״ב"];
+const years = [
+  "תשפ״ה",
+  "תשפ״ד",
+  "תשפ״ג",
+  "תשפ״ב",
+];
 
 const mediaSources = [
-  { key: "LinkedIn", color: "#A78BFA" },
-  { key: "Instagram", color: "#A3E635" },
-  { key: "Google Ads", color: "#FBBF24" },
-  { key: "Facebook", color: "#60A5FA" },
-  { key: "Website", color: "#34D399" },
-  { key: "TikTok", color: "#FB7185" },
-  { key: "Referral", color: "#F97316" },
-  { key: "Other", color: "#94A3B8" },
+  {
+    key: "LinkedIn",
+    color: "#A78BFA",
+  },
+  {
+    key: "Instagram",
+    color: "#A3E635",
+  },
+  {
+    key: "Google Ads",
+    color: "#FBBF24",
+  },
+  {
+    key: "Facebook",
+    color: "#60A5FA",
+  },
+  {
+    key: "Website",
+    color: "#34D399",
+  },
+  {
+    key: "TikTok",
+    color: "#FB7185",
+  },
+  {
+    key: "Referral",
+    color: "#F97316",
+  },
+  {
+    key: "Other",
+    color: "#94A3B8",
+  },
 ];
 
-const fmtInt = (n) => new Intl.NumberFormat("he-IL").format(Number(n) || 0);
+const fmtInt = (number) =>
+  new Intl.NumberFormat("he-IL").format(
+    Number(number) || 0
+  );
 
-function MiniIcon({ children, className = "", size = "h-5 w-5" }) {
+/*
+ * מחזיר את טוקן ההתחברות שנשמר בדפדפן.
+ */
+function getStoredToken() {
+  return (
+    localStorage.getItem("token") ||
+    sessionStorage.getItem("token")
+  );
+}
+
+/*
+ * מוחק את נתוני ההתחברות מהדפדפן.
+ */
+function clearAuthenticationData() {
+  localStorage.removeItem("token");
+  localStorage.removeItem("user");
+  localStorage.removeItem("loggedInUsername");
+  localStorage.removeItem("loggedInEmail");
+  localStorage.removeItem("loggedInRole");
+
+  sessionStorage.removeItem("token");
+  sessionStorage.removeItem("user");
+  sessionStorage.removeItem("loggedInUsername");
+  sessionStorage.removeItem("loggedInEmail");
+  sessionStorage.removeItem("loggedInRole");
+}
+
+/*
+ * מחזיר את המשתמש למסך ההתחברות.
+ */
+function redirectToLogin() {
+  clearAuthenticationData();
+
+  if (window.location.pathname !== "/login") {
+    window.location.replace("/login");
+  }
+}
+
+/*
+ * שולח בקשת API עם JWT בכותרת Authorization.
+ */
+async function authenticatedFetch(
+  path,
+  options = {}
+) {
+  const token = getStoredToken();
+
+  if (!token) {
+    redirectToLogin();
+
+    throw new Error(
+      "נדרשת התחברות למערכת"
+    );
+  }
+
+  const response = await fetch(
+    `${API_BASE_URL}${path}`,
+    {
+      ...options,
+
+      headers: {
+        ...(options.headers || {}),
+        Authorization: `Bearer ${token}`,
+      },
+    }
+  );
+
+  /*
+   * אם הטוקן אינו תקין או שפג תוקפו,
+   * השרת מחזיר 401.
+   */
+  if (response.status === 401) {
+    redirectToLogin();
+
+    throw new Error(
+      "תוקף ההתחברות פג. יש להתחבר מחדש"
+    );
+  }
+
+  return response;
+}
+
+function MiniIcon({
+  children,
+  className = "",
+  size = "h-5 w-5",
+}) {
   return (
     <svg
       viewBox="0 0 24 24"
@@ -50,19 +185,24 @@ function MiniIcon({ children, className = "", size = "h-5 w-5" }) {
 
 function IcoTitle() {
   return (
-    <MiniIcon size="h-5 w-5" className="text-white/60">
+    <MiniIcon
+      size="h-5 w-5"
+      className="text-white/60"
+    >
       <path
         d="M8 3h6l4 4v14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2Z"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
       />
+
       <path
         d="M14 3v5h5"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinejoin="round"
       />
+
       <path
         d="M9 12h6M9 16h6"
         stroke="currentColor"
@@ -76,13 +216,17 @@ function IcoTitle() {
 
 function IcoCard() {
   return (
-    <MiniIcon className="text-white/60" size="h-5 w-5">
+    <MiniIcon
+      className="text-white/60"
+      size="h-5 w-5"
+    >
       <path
         d="M12 3v9h9"
         stroke="currentColor"
         strokeWidth="2"
         strokeLinecap="round"
       />
+
       <path
         d="M21 12a9 9 0 1 1-9-9"
         stroke="currentColor"
@@ -93,34 +237,55 @@ function IcoCard() {
   );
 }
 
-function CustomTooltip({ active, payload }) {
-  if (!active || !payload?.length) return null;
+function CustomTooltip({
+  active,
+  payload,
+}) {
+  if (!active || !payload?.length) {
+    return null;
+  }
 
   const item = payload[0]?.payload;
   const value = payload[0]?.value ?? 0;
-  const pct = item?.__pct ?? null;
+  const percentage = item?.__pct ?? null;
 
   return (
     <div className="rounded-xl border border-slate-700/40 bg-slate-950/90 p-3 text-slate-100 shadow-lg">
-      <div className="mb-1 font-bold">{item?.name}</div>
-
-      <div className="text-sm text-slate-200">
-        כמות: <span className="font-semibold">{fmtInt(value)}</span>
+      <div className="mb-1 font-bold">
+        {item?.name}
       </div>
 
-      {pct !== null ? (
+      <div className="text-sm text-slate-200">
+        כמות:{" "}
+        <span className="font-semibold">
+          {fmtInt(value)}
+        </span>
+      </div>
+
+      {percentage !== null ? (
         <div className="text-sm text-slate-200">
-          אחוז: <span className="font-semibold">{pct}%</span>
+          אחוז:{" "}
+          <span className="font-semibold">
+            {percentage}%
+          </span>
         </div>
       ) : null}
     </div>
   );
 }
 
-function renderPieLabel({ x, y, percent }) {
-  const pct = Math.round((percent ?? 0) * 100);
+function renderPieLabel({
+  x,
+  y,
+  percent,
+}) {
+  const percentage = Math.round(
+    (percent ?? 0) * 100
+  );
 
-  if (pct <= 0) return null;
+  if (percentage <= 0) {
+    return null;
+  }
 
   return (
     <text
@@ -131,24 +296,35 @@ function renderPieLabel({ x, y, percent }) {
       dominantBaseline="central"
       fontSize={14}
       fontWeight={800}
-      style={{ textShadow: "0 2px 10px rgba(0,0,0,0.45)" }}
+      style={{
+        textShadow:
+          "0 2px 10px rgba(0,0,0,0.45)",
+      }}
     >
-      {pct}%
+      {percentage}%
     </text>
   );
 }
 
 function CustomLegend({ payload }) {
-  if (!payload?.length) return null;
+  if (!payload?.length) {
+    return null;
+  }
 
   return (
     <div className="flex flex-wrap justify-center gap-4 pt-2 text-sm text-white/80">
       {payload.map((entry) => (
-        <div key={entry.value} className="flex items-center gap-2">
+        <div
+          key={entry.value}
+          className="flex items-center gap-2"
+        >
           <span
             className="inline-block h-2.5 w-2.5 rounded-full"
-            style={{ backgroundColor: entry.color }}
+            style={{
+              backgroundColor: entry.color,
+            }}
           />
+
           <span>{entry.value}</span>
         </div>
       ))}
@@ -157,7 +333,11 @@ function CustomLegend({ payload }) {
 }
 
 function PiePanel({ title, data }) {
-  const total = data.reduce((sum, item) => sum + (Number(item.value) || 0), 0);
+  const total = data.reduce(
+    (sum, item) =>
+      sum + (Number(item.value) || 0),
+    0
+  );
 
   return (
     <div className="rounded-2xl bg-[#2e3038] p-4 ring-1 ring-white/10">
@@ -167,10 +347,18 @@ function PiePanel({ title, data }) {
 
       {total > 0 ? (
         <div className="rounded-2xl bg-white/6 p-2 ring-1 ring-white/5">
-          <ResponsiveContainer width="100%" height={440}>
+          <ResponsiveContainer
+            width="100%"
+            height={440}
+          >
             <PieChart>
-              <Tooltip content={<CustomTooltip />} />
-              <Legend content={<CustomLegend />} />
+              <Tooltip
+                content={<CustomTooltip />}
+              />
+
+              <Legend
+                content={<CustomLegend />}
+              />
 
               <Pie
                 data={data}
@@ -187,7 +375,10 @@ function PiePanel({ title, data }) {
                 label={renderPieLabel}
               >
                 {data.map((item) => (
-                  <Cell key={item.name} fill={item.color} />
+                  <Cell
+                    key={item.name}
+                    fill={item.color}
+                  />
                 ))}
               </Pie>
             </PieChart>
@@ -195,7 +386,8 @@ function PiePanel({ title, data }) {
         </div>
       ) : (
         <div className="rounded-2xl border border-white/10 bg-white/5 p-8 text-center text-sm text-white/70">
-          אין נתונים להצגה עבור התרשים הזה.
+          אין נתונים להצגה עבור התרשים
+          הזה.
         </div>
       )}
     </div>
@@ -205,26 +397,47 @@ function PiePanel({ title, data }) {
 export default function Report5() {
   const navigate = useNavigate();
 
-  const [menuOpen, setMenuOpen] = useState(false);
-  const [campus, setCampus] = useState("ALL");
-  const [year, setYear] = useState("תשפ״ה");
+  const [menuOpen, setMenuOpen] =
+    useState(false);
 
-  const [raw, setRaw] = useState([]);
-  const [loading, setLoading] = useState(false);
-  const [errorMessage, setErrorMessage] = useState("");
+  const [campus, setCampus] =
+    useState("ALL");
+
+  const [year, setYear] =
+    useState("תשפ״ה");
+
+  const [raw, setRaw] =
+    useState([]);
+
+  const [loading, setLoading] =
+    useState(false);
+
+  const [
+    errorMessage,
+    setErrorMessage,
+  ] = useState("");
 
   const campusLabel =
-    campusOptions.find((item) => item.key === campus)?.label ?? "כל הקמפוסים";
+    campusOptions.find(
+      (item) => item.key === campus
+    )?.label ?? "כל הקמפוסים";
 
+  /*
+   * בדיקה ראשונית שקיים טוקן בדפדפן.
+   */
   useEffect(() => {
-    const token =
-      localStorage.getItem("token") || sessionStorage.getItem("token");
+    const token = getStoredToken();
 
     if (!token) {
-      navigate("/login", { replace: true });
+      navigate("/login", {
+        replace: true,
+      });
     }
   }, [navigate]);
 
+  /*
+   * טעינת נתוני דוח 5 מה-Backend.
+   */
   useEffect(() => {
     let cancelled = false;
 
@@ -233,52 +446,77 @@ export default function Report5() {
         setLoading(true);
         setErrorMessage("");
 
-        const qs = new URLSearchParams({
-          campus,
-          year,
-        });
+        const queryString =
+          new URLSearchParams({
+            campus,
+            year,
+          });
 
-        const res = await fetch(
-          `${API_BASE_URL}/api/report5/media?${qs.toString()}`
-        );
+        const response =
+          await authenticatedFetch(
+            `/api/report5/media?${queryString.toString()}`
+          );
 
         let json = null;
 
         try {
-          json = await res.json();
+          json = await response.json();
         } catch {
           json = null;
         }
 
-        if (!res.ok) {
-          throw new Error(json?.message || "שגיאה בטעינת נתוני דוח 5");
+        if (!response.ok) {
+          throw new Error(
+            json?.message ||
+              "שגיאה בטעינת נתוני דוח 5"
+          );
         }
 
         if (!Array.isArray(json)) {
-          throw new Error("מבנה הנתונים שהתקבל מהשרת אינו תקין");
+          throw new Error(
+            "מבנה הנתונים שהתקבל מהשרת אינו תקין"
+          );
         }
 
-        const merged = mediaSources.map((source) => {
-          const found = json.find((item) => item.name === source.key);
+        const merged =
+          mediaSources.map((source) => {
+            const found = json.find(
+              (item) =>
+                item.name === source.key
+            );
 
-          return {
-            name: source.key,
-            gross: Number(found?.gross) || 0,
-            qualified: Number(found?.qualified) || 0,
-            color: found?.color || source.color,
-          };
-        });
+            return {
+              name: source.key,
+
+              gross:
+                Number(found?.gross) || 0,
+
+              qualified:
+                Number(
+                  found?.qualified
+                ) || 0,
+
+              color:
+                found?.color ||
+                source.color,
+            };
+          });
 
         if (!cancelled) {
           setRaw(merged);
         }
       } catch (error) {
-        console.error("Report5 load error:", error);
+        console.error(
+          "Report5 load error:",
+          error
+        );
 
         if (!cancelled) {
           setRaw([]);
+
           setErrorMessage(
-            error.message || "לא ניתן לטעון את נתוני הדוח כרגע"
+            error.message ||
+              "לא ניתן לטעון את נתוני הדוח כרגע"
           );
         }
       } finally {
@@ -296,48 +534,98 @@ export default function Report5() {
   }, [campus, year]);
 
   const grossData = useMemo(() => {
-    const total = raw.reduce((sum, item) => sum + (Number(item.gross) || 0), 0);
-
-    return raw.map((item) => ({
-      name: item.name,
-      value: Number(item.gross) || 0,
-      color: item.color,
-      __pct: total ? Math.round(((Number(item.gross) || 0) / total) * 100) : 0,
-    }));
-  }, [raw]);
-
-  const qualifiedData = useMemo(() => {
     const total = raw.reduce(
-      (sum, item) => sum + (Number(item.qualified) || 0),
+      (sum, item) =>
+        sum +
+        (Number(item.gross) || 0),
       0
     );
 
     return raw.map((item) => ({
       name: item.name,
-      value: Number(item.qualified) || 0,
+      value:
+        Number(item.gross) || 0,
       color: item.color,
+
       __pct: total
-        ? Math.round(((Number(item.qualified) || 0) / total) * 100)
+        ? Math.round(
+            ((Number(item.gross) ||
+              0) /
+              total) *
+              100
+          )
         : 0,
     }));
   }, [raw]);
 
-  const totalGross = grossData.reduce((sum, item) => sum + (item.value ?? 0), 0);
-  const totalQualified = qualifiedData.reduce(
-    (sum, item) => sum + (item.value ?? 0),
+  const qualifiedData = useMemo(() => {
+    const total = raw.reduce(
+      (sum, item) =>
+        sum +
+        (Number(item.qualified) ||
+          0),
+      0
+    );
+
+    return raw.map((item) => ({
+      name: item.name,
+
+      value:
+        Number(item.qualified) || 0,
+
+      color: item.color,
+
+      __pct: total
+        ? Math.round(
+            ((Number(
+              item.qualified
+            ) || 0) /
+              total) *
+              100
+          )
+        : 0,
+    }));
+  }, [raw]);
+
+  const totalGross = grossData.reduce(
+    (sum, item) =>
+      sum + (item.value ?? 0),
     0
   );
 
+  const totalQualified =
+    qualifiedData.reduce(
+      (sum, item) =>
+        sum + (item.value ?? 0),
+      0
+    );
+
   const qualifiedRate = totalGross
-    ? ((totalQualified / totalGross) * 100).toFixed(1)
+    ? (
+        (totalQualified /
+          totalGross) *
+        100
+      ).toFixed(1)
     : "0.0";
 
-  const hasData = raw.length > 0 && totalGross > 0;
+  const hasData =
+    raw.length > 0 && totalGross > 0;
 
   return (
-    <div dir="rtl" className="min-h-screen bg-[#2e3038] text-white">
+    <div
+      dir="rtl"
+      className="min-h-screen bg-[#2e3038] text-white"
+    >
       <TopNavbar />
-      <Sidebar isOpen={menuOpen} onToggle={() => setMenuOpen((s) => !s)} />
+
+      <Sidebar
+        isOpen={menuOpen}
+        onToggle={() =>
+          setMenuOpen(
+            (current) => !current
+          )
+        }
+      />
 
       <div className="mx-auto max-w-6xl px-6 pt-28 pb-14">
         <div className="mt-6 text-center">
@@ -350,48 +638,83 @@ export default function Report5() {
           </div>
 
           <p className="mt-2 text-sm text-white/75">
-            התפלגות לידים לפי מקור מדיה מתוך בסיס הנתונים | שנה:{" "}
-            <span className="font-semibold">{year}</span> | קמפוס:{" "}
-            <span className="font-semibold">{campusLabel}</span>
-            {loading ? <span className="mr-2">(טוען...)</span> : null}
+            התפלגות לידים לפי מקור מדיה
+            מתוך בסיס הנתונים | שנה:{" "}
+            <span className="font-semibold">
+              {year}
+            </span>{" "}
+            | קמפוס:{" "}
+            <span className="font-semibold">
+              {campusLabel}
+            </span>
+
+            {loading ? (
+              <span className="mr-2">
+                (טוען...)
+              </span>
+            ) : null}
           </p>
         </div>
 
         {hasData ? (
           <div className="mt-5 text-center text-sm text-white/80">
-            <span className="font-semibold">{qualifiedRate}%</span> יחס איכותיים
-            • הלידים האיכותיים:{" "}
-            <span className="font-semibold">{fmtInt(totalQualified)}</span> •
-            סה״כ הלידים:{" "}
-            <span className="font-semibold">{fmtInt(totalGross)}</span>
+            <span className="font-semibold">
+              {qualifiedRate}%
+            </span>{" "}
+            יחס איכותיים • הלידים האיכותיים:{" "}
+            <span className="font-semibold">
+              {fmtInt(totalQualified)}
+            </span>{" "}
+            • סה״כ הלידים:{" "}
+            <span className="font-semibold">
+              {fmtInt(totalGross)}
+            </span>
           </div>
         ) : null}
 
         <div className="mt-6 flex flex-col items-center justify-between gap-4 lg:flex-row">
           <div className="flex flex-wrap items-center gap-3">
-            <div className="text-sm text-white/80">קמפוס</div>
+            <div className="text-sm text-white/80">
+              קמפוס
+            </div>
 
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={campus}
-              onChange={(e) => setCampus(e.target.value)}
+              onChange={(event) =>
+                setCampus(
+                  event.target.value
+                )
+              }
             >
-              {campusOptions.map((item) => (
-                <option key={item.key} value={item.key}>
-                  {item.label}
-                </option>
-              ))}
+              {campusOptions.map(
+                (item) => (
+                  <option
+                    key={item.key}
+                    value={item.key}
+                  >
+                    {item.label}
+                  </option>
+                )
+              )}
             </select>
 
-            <div className="text-sm text-white/80">שנה</div>
+            <div className="text-sm text-white/80">
+              שנה
+            </div>
 
             <select
               className="rounded-xl bg-white/10 px-3 py-2 text-sm ring-1 ring-white/10 focus:outline-none"
               value={year}
-              onChange={(e) => setYear(e.target.value)}
+              onChange={(event) =>
+                setYear(event.target.value)
+              }
             >
               {years.map((item) => (
-                <option key={item} value={item}>
+                <option
+                  key={item}
+                  value={item}
+                >
                   {item}
                 </option>
               ))}
@@ -409,31 +732,44 @@ export default function Report5() {
           </div>
         ) : null}
 
-        {!loading && !errorMessage && !hasData ? (
+        {!loading &&
+        !errorMessage &&
+        !hasData ? (
           <div className="mt-8 rounded-2xl border border-white/10 bg-white/5 p-5 text-center text-sm text-white/75">
-            אין נתונים להצגה עבור הסינון שנבחר.
+            אין נתונים להצגה עבור הסינון
+            שנבחר.
           </div>
         ) : null}
 
         {hasData ? (
           <div className="mt-8">
-            <div className="rounded-[28px] bg-[#3b3e47] p-6 lg:p-7 shadow-[0_18px_55px_rgba(0,0,0,0.35)]">
+            <div className="rounded-[28px] bg-[#3b3e47] p-6 shadow-[0_18px_55px_rgba(0,0,0,0.35)] lg:p-7">
               <div className="mb-4 flex items-center justify-between gap-3">
                 <div className="flex items-center gap-2">
                   <IcoCard />
+
                   <div className="text-lg font-bold">
-                    התפלגות לידים לפי מקור מדיה
+                    התפלגות לידים לפי מקור
+                    מדיה
                   </div>
                 </div>
 
                 <div className="text-xs text-white/60">
-                  2 תרשימי עוגה של לידים איכותיים מול סה״כ הלידים
+                  2 תרשימי עוגה של לידים
+                  איכותיים מול סה״כ הלידים
                 </div>
               </div>
 
               <div className="grid grid-cols-1 gap-6 lg:grid-cols-2">
-                <PiePanel title="לידים איכותיים" data={qualifiedData} />
-                <PiePanel title="סה״כ לידים" data={grossData} />
+                <PiePanel
+                  title="לידים איכותיים"
+                  data={qualifiedData}
+                />
+
+                <PiePanel
+                  title="סה״כ לידים"
+                  data={grossData}
+                />
               </div>
             </div>
           </div>

@@ -1,7 +1,5 @@
 const express = require("express");
-const router = express.Router();
 const rateLimit = require("express-rate-limit");
-const prisma = require("../config/db");
 
 const {
   login,
@@ -9,34 +7,90 @@ const {
   verifyEmailChange,
 } = require("../controllers/authController");
 
+const {
+  logSecurityEvent,
+} = require("../utils/securityLogger");
+
+const router = express.Router();
+
+/*
+ * עד חמישה ניסיונות התחברות כושלים
+ * בדקה לכל כתובת IP.
+ */
 const loginLimiter = rateLimit({
-  windowMs: 1 * 60 * 1000, // חלון זמן של דקה אחת
-  max: 5, // מקסימום 5 ניסיונות התחברות בדקה לכל כתובת IP
+  windowMs: 60 * 1000,
+  limit: 5,
+
   standardHeaders: true,
   legacyHeaders: false,
-  handler: async (req, res, next, options) => {
-    try {
-      // 1. שמירת תיעוד (Log) של הבקשה החסומה במסד הנתונים
-      await prisma.securityLog.create({
-        data: {
-          ipAddress: req.ip || req.connection.remoteAddress || "Unknown IP",
-          reason: "Brute force login attempt blocked", // סיבת החסימה
-        },
-      });
-      console.warn(`[Security Log] Blocked login attempt from IP: ${req.ip}`);
-    } catch (error) {
-      console.error("Failed to save security log:", error);
-    }
 
-    res.status(429).json({
+  /*
+   * התחברות מוצלחת אינה נספרת
+   * כניסיון כושל.
+   */
+  skipSuccessfulRequests: true,
+
+  /*
+   * הפונקציה מופעלת כאשר כתובת IP
+   * עוברת את מגבלת הניסיונות.
+   */
+  handler: async (
+    req,
+    res,
+    next,
+    options
+  ) => {
+    const statusCode =
+      options?.statusCode || 429;
+
+    await logSecurityEvent({
+      req,
+      eventType:
+        "LOGIN_RATE_LIMITED",
+
+      reason:
+        "Login request blocked because the rate limit was exceeded",
+
+      username:
+        req.body?.username,
+
+      statusCode,
+
+      blocked: true,
+
+      details: {
+        windowMs: 60 * 1000,
+        limit: 5,
+      },
+    });
+
+    return res.status(statusCode).json({
       success: false,
-      message: "בוצעו יותר מדי ניסיונות התחברות. אנא נסה שוב בעוד דקה.",
+
+      message:
+        "בוצעו יותר מדי ניסיונות התחברות. אנא נסה שוב בעוד דקה.",
     });
   },
 });
 
-router.post("/login", login);
-router.post("/profile/request-email-change", requestEmailChange);
-router.post("/profile/verify-email-change", verifyEmailChange);
+router.post(
+  "/login",
+  loginLimiter,
+  login
+);
+
+/*
+ * נתיבי שינוי האימייל יאובטחו
+ * בשלב נפרד.
+ */
+router.post(
+  "/profile/request-email-change",
+  requestEmailChange
+);
+
+router.post(
+  "/profile/verify-email-change",
+  verifyEmailChange
+);
 
 module.exports = router;

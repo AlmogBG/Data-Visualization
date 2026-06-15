@@ -1,61 +1,176 @@
 const prisma = require("../config/db");
 const bcrypt = require("bcryptjs");
 const jwt = require("jsonwebtoken");
-const { sendVerificationCode } = require("../utils/mailer");
+
+const {
+  sendVerificationCode,
+} = require("../utils/mailer");
+
+const {
+  logSecurityEvent,
+} = require("../utils/securityLogger");
 
 const pendingEmailUpdates = new Map();
 
 function generateVerificationCode() {
-  return Math.floor(100000 + Math.random() * 900000).toString();
+  return Math.floor(
+    100000 + Math.random() * 900000
+  ).toString();
 }
 
 async function login(req, res) {
+  const rawUsername =
+    req.body?.username;
+
+  const rawPassword =
+    req.body?.password;
+
+  const username =
+    typeof rawUsername === "string"
+      ? rawUsername.trim()
+      : "";
+
+  const password =
+    typeof rawPassword === "string"
+      ? rawPassword
+      : "";
+
   try {
-    const { username, password } = req.body || {};
-
-    console.log("========== LOGIN REQUEST ==========");
-    console.log("username received:", username);
-
     if (!username || !password) {
-      return res.status(400).json({ message: "חובה להזין שם משתמש וסיסמה" });
+      await logSecurityEvent({
+        req,
+        eventType: "LOGIN_FAILED",
+
+        reason:
+          "Login request was missing a username or password",
+
+        username,
+
+        statusCode: 400,
+
+        blocked: false,
+      });
+
+      return res.status(400).json({
+        message:
+          "חובה להזין שם משתמש וסיסמה",
+      });
     }
 
-    const user = await prisma.user.findUnique({
-      where: { username },
-    });
-
-    console.log("user lookup in DB completed.");
+    const user =
+      await prisma.user.findUnique({
+        where: {
+          username,
+        },
+      });
 
     if (!user) {
-      console.log("login failed: user not found in DB");
-      console.log("==================================");
-      return res.status(401).json({ message: "שם משתמש או סיסמה שגויים" });
+      await logSecurityEvent({
+        req,
+        eventType: "LOGIN_FAILED",
+
+        reason:
+          "Invalid username or password",
+
+        username,
+
+        statusCode: 401,
+
+        blocked: false,
+      });
+
+      return res.status(401).json({
+        message:
+          "שם משתמש או סיסמה שגויים",
+      });
     }
 
-    console.log("user found in DB:", {
-      idNumber: user.idNumber,
-      username: user.username,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-    });
-
-    const passwordRow = await prisma.password.findUnique({
-      where: { idNumber: user.idNumber },
-    });
+    const passwordRow =
+      await prisma.password.findUnique({
+        where: {
+          idNumber: user.idNumber,
+        },
+      });
 
     if (!passwordRow) {
-      console.log("login failed: password row not found in DB");
-      console.log("==================================");
-      return res.status(401).json({ message: "שם משתמש או סיסמה שגויים" });
+      await logSecurityEvent({
+        req,
+        eventType: "LOGIN_FAILED",
+
+        reason:
+          "Password record was not found",
+
+        username,
+
+        statusCode: 401,
+
+        blocked: false,
+      });
+
+      return res.status(401).json({
+        message:
+          "שם משתמש או סיסמה שגויים",
+      });
     }
 
-    const isMatch = await bcrypt.compare(password, passwordRow.passwordHash);
+    const isMatch =
+      await bcrypt.compare(
+        password,
+        passwordRow.passwordHash
+      );
 
     if (!isMatch) {
-      console.log("login failed: password mismatch");
-      console.log("==================================");
-      return res.status(401).json({ message: "שם משתמש או סיסמה שגויים" });
+      await logSecurityEvent({
+        req,
+        eventType: "LOGIN_FAILED",
+
+        reason:
+          "Invalid username or password",
+
+        username,
+
+        statusCode: 401,
+
+        blocked: false,
+      });
+
+      return res.status(401).json({
+        message:
+          "שם משתמש או סיסמה שגויים",
+      });
+    }
+
+    const jwtSecret =
+      process.env.JWT_SECRET;
+
+    /*
+     * אין ליצור JWT עם מפתח ברירת מחדל.
+     */
+    if (!jwtSecret) {
+      console.error(
+        "JWT_SECRET is missing from environment variables"
+      );
+
+      await logSecurityEvent({
+        req,
+
+        eventType:
+          "SERVER_SECURITY_ERROR",
+
+        reason:
+          "JWT_SECRET environment variable is missing",
+
+        username,
+
+        statusCode: 500,
+
+        blocked: true,
+      });
+
+      return res.status(500).json({
+        message:
+          "שגיאת שרת בהתחברות",
+      });
     }
 
     const token = jwt.sign(
@@ -64,20 +179,33 @@ async function login(req, res) {
         idNumber: user.idNumber,
         role: user.role,
       },
-      process.env.JWT_SECRET || "secret_key",
-      { expiresIn: "8h" }
+      jwtSecret,
+      {
+        expiresIn: "8h",
+        algorithm: "HS256",
+      }
     );
 
-    console.log("login success:");
-    console.log({
-      username: user.username,
-      fullName: user.fullName,
-      email: user.email,
-      role: user.role,
-    });
-    console.log("==================================");
+    await logSecurityEvent({
+      req,
 
-    return res.json({
+      eventType: "LOGIN_SUCCESS",
+
+      reason:
+        "User logged in successfully",
+
+      username: user.username,
+
+      statusCode: 200,
+
+      blocked: false,
+
+      details: {
+        role: user.role,
+      },
+    });
+
+    return res.status(200).json({
       ok: true,
       token,
       username: user.username,
@@ -86,199 +214,263 @@ async function login(req, res) {
       fullName: user.fullName,
     });
   } catch (error) {
-    console.error("login error full:", error);
-    console.error("login error message:", error.message);
-    return res.status(500).json({ message: "שגיאת שרת בהתחברות" });
+    console.error(
+      "Login controller error:",
+      error.message
+    );
+
+    await logSecurityEvent({
+      req,
+
+      eventType:
+        "SERVER_SECURITY_ERROR",
+
+      reason:
+        "Unexpected error occurred during login",
+
+      username,
+
+      statusCode: 500,
+
+      blocked: false,
+
+      details: {
+        errorName:
+          error?.name ||
+          "UnknownError",
+      },
+    });
+
+    return res.status(500).json({
+      message:
+        "שגיאת שרת בהתחברות",
+    });
   }
 }
 
-async function requestEmailChange(req, res) {
+async function requestEmailChange(
+  req,
+  res
+) {
   try {
-    const { username, email } = req.body || {};
-
-    console.log("====== REQUEST EMAIL CHANGE ======");
-    console.log("request received for username:", username);
+    const {
+      username,
+      email,
+    } = req.body || {};
 
     if (!username || !email) {
       return res.status(400).json({
-        message: "חובה לשלוח שם משתמש ואימייל",
+        message:
+          "חובה לשלוח שם משתמש ואימייל",
       });
     }
 
-    const trimmedEmail = email.trim().toLowerCase();
+    const trimmedEmail =
+      email.trim().toLowerCase();
 
-    const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
-    if (!emailRegex.test(trimmedEmail)) {
+    const emailRegex =
+      /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+    if (
+      !emailRegex.test(trimmedEmail)
+    ) {
       return res.status(400).json({
-        message: "כתובת האימייל אינה תקינה",
+        message:
+          "כתובת האימייל אינה תקינה",
       });
     }
 
-    const existingUser = await prisma.user.findUnique({
-      where: { username },
-    });
+    const existingUser =
+      await prisma.user.findUnique({
+        where: {
+          username,
+        },
+      });
 
     if (!existingUser) {
-      console.log("email change failed: user not found in DB");
-      console.log("==================================");
       return res.status(404).json({
-        message: "המשתמש לא נמצא",
+        message:
+          "המשתמש לא נמצא",
       });
     }
 
-    console.log("current user details from DB:");
-    console.log({
-      username: existingUser.username,
-      fullName: existingUser.fullName,
-      oldEmail: existingUser.email,
-      role: existingUser.role,
-    });
-
-    if ((existingUser.email || "").toLowerCase() === trimmedEmail) {
-      console.log("email change cancelled: new email is identical to current email");
-      console.log("==================================");
+    if (
+      (
+        existingUser.email || ""
+      ).toLowerCase() === trimmedEmail
+    ) {
       return res.status(400).json({
-        message: "זהו כבר האימייל הנוכחי שלך",
+        message:
+          "זהו כבר האימייל הנוכחי שלך",
       });
     }
 
-    const emailOwner = await prisma.user.findUnique({
-      where: { email: trimmedEmail },
-    });
+    const emailOwner =
+      await prisma.user.findUnique({
+        where: {
+          email: trimmedEmail,
+        },
+      });
 
-    if (emailOwner && emailOwner.username !== username) {
-      console.log("email change failed: requested email already belongs to another user");
-      console.log("==================================");
+    if (
+      emailOwner &&
+      emailOwner.username !== username
+    ) {
       return res.status(409).json({
-        message: "כתובת האימייל כבר קיימת במערכת",
+        message:
+          "כתובת האימייל כבר קיימת במערכת",
       });
     }
 
-    const code = generateVerificationCode();
-    const expiresAt = Date.now() + 10 * 60 * 1000;
+    const code =
+      generateVerificationCode();
 
-    pendingEmailUpdates.set(username, {
-      oldEmail: existingUser.email,
-      newEmail: trimmedEmail,
-      code,
-      expiresAt,
-      fullName: existingUser.fullName,
-      role: existingUser.role,
-    });
+    const expiresAt =
+      Date.now() +
+      10 * 60 * 1000;
 
-    await sendVerificationCode(trimmedEmail, code);
-
-    console.log("verification email sent successfully.");
-    console.log("pending email change saved:");
-    console.log({
+    pendingEmailUpdates.set(
       username,
-      fullName: existingUser.fullName,
-      oldEmail: existingUser.email,
-      newEmail: trimmedEmail,
-      role: existingUser.role,
-      expiresAt: new Date(expiresAt).toISOString(),
-    });
-    console.log("==================================");
+      {
+        oldEmail:
+          existingUser.email,
 
-    return res.json({
+        newEmail:
+          trimmedEmail,
+
+        code,
+        expiresAt,
+
+        fullName:
+          existingUser.fullName,
+
+        role:
+          existingUser.role,
+      }
+    );
+
+    await sendVerificationCode(
+      trimmedEmail,
+      code
+    );
+
+    return res.status(200).json({
       ok: true,
-      message: "קוד אימות נשלח לכתובת האימייל החדשה",
+
+      message:
+        "קוד אימות נשלח לכתובת האימייל החדשה",
     });
   } catch (error) {
-    console.error("requestEmailChange error full:", error);
-    console.error("requestEmailChange error message:", error.message);
+    console.error(
+      "Request email change error:",
+      error.message
+    );
+
     return res.status(500).json({
-      message: "שגיאה בעת שליחת קוד האימות",
+      message:
+        "שגיאה בעת שליחת קוד האימות",
     });
   }
 }
 
-async function verifyEmailChange(req, res) {
+async function verifyEmailChange(
+  req,
+  res
+) {
   try {
-    const { username, code } = req.body || {};
-
-    console.log("====== VERIFY EMAIL CHANGE ======");
-    console.log("verification request received for username:", username);
+    const {
+      username,
+      code,
+    } = req.body || {};
 
     if (!username || !code) {
       return res.status(400).json({
-        message: "חובה לשלוח שם משתמש וקוד אימות",
+        message:
+          "חובה לשלוח שם משתמש וקוד אימות",
       });
     }
 
-    const pending = pendingEmailUpdates.get(username);
+    const pending =
+      pendingEmailUpdates.get(
+        username
+      );
 
     if (!pending) {
-      console.log("verification failed: no pending email change request found");
-      console.log("==================================");
       return res.status(400).json({
-        message: "לא נמצאה בקשת אימות פעילה",
+        message:
+          "לא נמצאה בקשת אימות פעילה",
       });
     }
 
-    if (Date.now() > pending.expiresAt) {
-      pendingEmailUpdates.delete(username);
-      console.log("verification failed: code expired");
-      console.log("==================================");
+    if (
+      Date.now() >
+      pending.expiresAt
+    ) {
+      pendingEmailUpdates.delete(
+        username
+      );
+
       return res.status(400).json({
-        message: "קוד האימות פג תוקף. נא לבקש קוד חדש",
+        message:
+          "קוד האימות פג תוקף. נא לבקש קוד חדש",
       });
     }
 
-    if (pending.code !== code.trim()) {
-      console.log("verification failed: wrong verification code");
-      console.log("==================================");
+    if (
+      pending.code !==
+      String(code).trim()
+    ) {
       return res.status(400).json({
-        message: "קוד האימות שגוי",
+        message:
+          "קוד האימות שגוי",
       });
     }
 
-    const beforeUpdate = await prisma.user.findUnique({
-      where: { username },
-    });
+    const updatedUser =
+      await prisma.user.update({
+        where: {
+          username,
+        },
 
-    const updatedUser = await prisma.user.update({
-      where: { username },
-      data: {
-        email: pending.newEmail,
-      },
-    });
+        data: {
+          email:
+            pending.newEmail,
+        },
+      });
 
-    pendingEmailUpdates.delete(username);
+    pendingEmailUpdates.delete(
+      username
+    );
 
-    console.log("email updated successfully in DB.");
-    console.log("before update:");
-    console.log({
-      username: beforeUpdate.username,
-      fullName: beforeUpdate.fullName,
-      email: beforeUpdate.email,
-      role: beforeUpdate.role,
-    });
-
-    console.log("after update:");
-    console.log({
-      username: updatedUser.username,
-      fullName: updatedUser.fullName,
-      email: updatedUser.email,
-      role: updatedUser.role,
-    });
-    console.log("==================================");
-
-    return res.json({
+    return res.status(200).json({
       ok: true,
-      message: "האימייל עודכן בהצלחה",
+
+      message:
+        "האימייל עודכן בהצלחה",
+
       user: {
-        username: updatedUser.username,
-        email: updatedUser.email,
-        role: updatedUser.role,
-        fullName: updatedUser.fullName,
+        username:
+          updatedUser.username,
+
+        email:
+          updatedUser.email,
+
+        role:
+          updatedUser.role,
+
+        fullName:
+          updatedUser.fullName,
       },
     });
   } catch (error) {
-    console.error("verifyEmailChange error full:", error);
-    console.error("verifyEmailChange error message:", error.message);
+    console.error(
+      "Verify email change error:",
+      error.message
+    );
+
     return res.status(500).json({
-      message: "שגיאת שרת באימות הקוד",
+      message:
+        "שגיאת שרת באימות הקוד",
     });
   }
 }
